@@ -88,6 +88,7 @@ static int g_dbg_level = 0;
 
 // Número máximo de argumentos de un comando
 #define MAX_ARGS 16
+//Número de comandos internos
 #define NUM_INTERNOS 3
 
 //Array de comandos internos
@@ -760,16 +761,38 @@ struct cmd* null_terminate(struct cmd* cmd)
 
 //Funcion de comando interno cwd
 
-char * run_cwd(){
-	char * resultado = NULL;
+void run_cwd(){
+	//char * resultado = NULL;
 	char path[PATH_MAX];
 	if (!getcwd(path,PATH_MAX)){
 		perror("run_cwd");
 		exit(EXIT_FAILURE);
 	}
-	sprintf(resultado,"cwd: %s",path);
-	return resultado;
+	printf("cwd: %s\n",path);
 
+}
+
+//Funcion para ejecutar comandos internos
+
+void exec_cmdInterno(struct execcmd * ecmd){
+	assert(ecmd->type == EXEC);
+	if (strcmp(ecmd->argv[0],"cwd") == 0){
+		run_cwd();
+	}
+}
+
+
+//Funcion que comprueba si un comando es interno
+
+int isInterno(struct execcmd* ecmd){
+	
+	if (ecmd->argv[0] == NULL) exit(EXIT_SUCCESS);	
+	for (int i=0;i<NUM_INTERNOS;i++){
+		if (strcmp(ecmd->argv[0],cmdInternos[i]) == 0){
+			return 1;
+		}
+	}
+	return 0;
 }
 
 /******************************************************************************
@@ -807,11 +830,15 @@ void run_cmd(struct cmd* cmd)
     switch(cmd->type)
     {
         case EXEC:
-            ecmd = (struct execcmd*) cmd;
-            if (fork_or_panic("fork EXEC") == 0)
-                exec_cmd(ecmd);
-            TRY( wait(NULL) );
-            break;
+            	ecmd = (struct execcmd*) cmd;
+	    	if (isInterno(ecmd))
+			exec_cmdInterno(ecmd);
+		else
+        	    	if (fork_or_panic("fork EXEC") == 0){
+				exec_cmd(ecmd);
+				TRY( wait(NULL) );
+	    		}
+            	break;
 
         case REDR:
             rcmd = (struct redrcmd*) cmd;
