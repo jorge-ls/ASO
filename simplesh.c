@@ -755,45 +755,12 @@ struct cmd* null_terminate(struct cmd* cmd)
     return cmd;
 }
 
-/** 
-	Funciones de comandos internos
-**/
+//Declaracion adelantada de funciones de comandos internos
 
-//Funcion de comando interno cwd
-
-void run_cwd(){
-	//char * resultado = NULL;
-	char path[PATH_MAX];
-	if (!getcwd(path,PATH_MAX)){
-		perror("run_cwd");
-		exit(EXIT_FAILURE);
-	}
-	printf("cwd: %s\n",path);
-
-}
-
-//Funcion para ejecutar comandos internos
-
-void exec_cmdInterno(struct execcmd * ecmd){
-	assert(ecmd->type == EXEC);
-	if (strcmp(ecmd->argv[0],"cwd") == 0){
-		run_cwd();
-	}
-}
-
-
-//Funcion que comprueba si un comando es interno
-
-int isInterno(struct execcmd* ecmd){
-	
-	if (ecmd->argv[0] == NULL) exit(EXIT_SUCCESS);	
-	for (int i=0;i<NUM_INTERNOS;i++){
-		if (strcmp(ecmd->argv[0],cmdInternos[i]) == 0){
-			return 1;
-		}
-	}
-	return 0;
-}
+void run_exit(struct execcmd * ecmd);
+void run_cwd();
+void exec_cmdInterno(struct execcmd * ecmd);
+int isInterno(struct execcmd * ecmd);
 
 /******************************************************************************
  * Funciones para la ejecución de la línea de órdenes
@@ -1119,6 +1086,60 @@ char* get_cmd()
         add_history(buf);
 
     return buf;
+}
+
+
+/** 
+	Funciones de comandos internos
+**/
+
+//Funcion del comando interno exit
+
+void run_exit(struct execcmd * ecmd){
+	struct cmd * cmd = (struct cmd*) execcmd;
+	free_cmd(cmd);
+	
+}
+
+//Funcion del comando interno cwd
+
+void run_cwd(){
+	char path[PATH_MAX];
+	if (!getcwd(path,PATH_MAX)){
+		perror("run_cwd");
+		exit(EXIT_FAILURE);
+	}
+	printf("cwd: %s\n",path);
+
+}
+
+//Funcion del comando interno cd
+
+
+
+//Funcion para ejecutar comandos internos
+
+void exec_cmdInterno(struct execcmd * ecmd){
+	assert(ecmd->type == EXEC);
+	if (strcmp(ecmd->argv[0],"cwd") == 0){
+		run_cwd();
+	}
+	else if (strcmp(ecmd->argv[0],"exit") == 0){
+		run_exit(ecmd);
+	}
+}
+
+//Funcion que comprueba si un comando es interno
+
+int isInterno(struct execcmd* ecmd){
+	
+	if (ecmd->argv[0] == NULL) exit(EXIT_SUCCESS);	
+	for (int i=0;i<NUM_INTERNOS;i++){
+		if (strcmp(ecmd->argv[0],cmdInternos[i]) == 0){
+			return 1;
+		}
+	}
+	return 0;
 }
 
 
