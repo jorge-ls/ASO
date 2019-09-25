@@ -99,6 +99,8 @@ static const char WHITESPACE[] = " \t\r\n\v";
 // Caracteres especiales
 static const char SYMBOLS[] = "<|>&;()";
 
+char pathAnterior[PATH_MAX];
+
 
 /******************************************************************************
  * Funciones auxiliares
@@ -758,6 +760,7 @@ struct cmd* null_terminate(struct cmd* cmd)
 //Declaracion adelantada de funciones de comandos internos
 
 void run_exit(struct execcmd * ecmd);
+void run_cd(struct execcmd * ecmd);
 void run_cwd();
 void exec_cmdInterno(struct execcmd * ecmd);
 int isInterno(struct execcmd * ecmd);
@@ -800,11 +803,13 @@ void run_cmd(struct cmd* cmd)
             	ecmd = (struct execcmd*) cmd;
 	    	if (isInterno(ecmd))
 			exec_cmdInterno(ecmd);
-		else
+		else{
         	    	if (fork_or_panic("fork EXEC") == 0){
 				exec_cmd(ecmd);
-				TRY( wait(NULL) );
-	    		}
+			}
+			TRY( wait(NULL) );
+		}
+		
             	break;
 
         case REDR:
@@ -1134,6 +1139,54 @@ void run_cwd(){
 
 }
 
+//Funcion del comando interno cd
+
+void run_cd(struct execcmd * ecmd){
+	if (ecmd->argv[1] == NULL) {
+		char path[PATH_MAX];
+		getcwd(path,PATH_MAX);
+		setenv("PATH_ANTERIOR", path, 1);
+
+		uid_t usuario = getuid();
+		struct passwd * passwd = getpwuid(usuario);
+		if (!passwd){
+			perror("getpwuid");
+			exit(EXIT_FAILURE);
+		}
+		//char home[] = "/home/";
+		//char * user = passwd->pw_name;
+		//strcat(home, user);
+		chdir(passwd->pw_dir);
+	}
+	else if (strcmp(ecmd->argv[1],"..") == 0) {
+		char path[PATH_MAX];
+		getcwd(path,PATH_MAX);
+		setenv("PATH_ANTERIOR", path, 1);
+
+		for (int i = strlen(path); i > 0; i--) {
+			if (path[i] == '/') {
+				path[i] = '\0';
+				break;
+			}
+		}
+		chdir(path);
+	}
+	else if (strcmp(ecmd->argv[1],"-") == 0) {
+		char path[PATH_MAX];
+		getcwd(path,PATH_MAX);
+		chdir(getenv("PATH_ANTERIOR"));
+		setenv("PATH_ANTERIOR", path, 1);
+
+	}
+	else {
+		char path[PATH_MAX];
+		getcwd(path,PATH_MAX);
+		setenv("PATH_ANTERIOR", path, 1);
+		chdir(ecmd->argv[1]);
+	}
+
+}
+
 
 //Funcion para ejecutar comandos internos
 
@@ -1144,6 +1197,9 @@ void exec_cmdInterno(struct execcmd * ecmd){
 	}
 	else if (strcmp(ecmd->argv[0],"exit") == 0){
 		run_exit(ecmd);
+	}
+	else if (strcmp(ecmd->argv[0], "cd") == 0) {
+		run_cd(ecmd);
 	}
 }
 
