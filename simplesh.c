@@ -818,10 +818,15 @@ void run_cmd(struct cmd* cmd)
                     exit(EXIT_FAILURE);
                 }
 
-                if (rcmd->cmd->type == EXEC)
-                    exec_cmd((struct execcmd*) rcmd->cmd);
-                else
+                if (rcmd->cmd->type == EXEC){
+		    if (isInterno((struct execcmd*) rcmd->cmd))
+			exec_cmdInterno((struct execcmd*) rcmd->cmd);
+		    else
+			exec_cmd((struct execcmd*) rcmd->cmd);
+                }    
+                else{
                     run_cmd(rcmd->cmd);
+		}
                 exit(EXIT_SUCCESS);
             }
             TRY( wait(NULL) );
@@ -848,10 +853,15 @@ void run_cmd(struct cmd* cmd)
                 TRY( dup(p[1]) );
                 TRY( close(p[0]) );
                 TRY( close(p[1]) );
-                if (pcmd->left->type == EXEC)
-                    exec_cmd((struct execcmd*) pcmd->left);
-                else
+                if (pcmd->left->type == EXEC){
+		    if (isInterno((struct execcmd*) pcmd->left))
+			exec_cmdInterno((struct execcmd*) pcmd->left);
+		    else
+			exec_cmd((struct execcmd*) pcmd->left);
+		}
+                else{
                     run_cmd(pcmd->left);
+		}
                 exit(EXIT_SUCCESS);
             }
 
@@ -862,10 +872,15 @@ void run_cmd(struct cmd* cmd)
                 TRY( dup(p[0]) );
                 TRY( close(p[0]) );
                 TRY( close(p[1]) );
-                if (pcmd->right->type == EXEC)
-                    exec_cmd((struct execcmd*) pcmd->right);
-                else
+                if (pcmd->right->type == EXEC){
+                    if (isInterno((struct execcmd*) pcmd->right))
+			exec_cmdInterno((struct execcmd*) pcmd->right);
+		    else
+			exec_cmd((struct execcmd*) pcmd->right);
+		}
+                else{
                     run_cmd(pcmd->right);
+		}
                 exit(EXIT_SUCCESS);
             }
             TRY( close(p[0]) );
@@ -880,11 +895,16 @@ void run_cmd(struct cmd* cmd)
             bcmd = (struct backcmd*)cmd;
             if (fork_or_panic("fork BACK") == 0)
             {
-                if (bcmd->cmd->type == EXEC)
-                    exec_cmd((struct execcmd*) bcmd->cmd);
-                else
+                if (bcmd->cmd->type == EXEC){
+			if (isInterno((struct execcmd*) bcmd->cmd))
+				exec_cmdInterno((struct execcmd*) bcmd->cmd);
+			else
+                    		exec_cmd((struct execcmd*) bcmd->cmd);
+		}
+		else{
                     run_cmd(bcmd->cmd);
-                exit(EXIT_SUCCESS);
+                }
+		exit(EXIT_SUCCESS);		
             }
             break;
 
@@ -1096,9 +1116,10 @@ char* get_cmd()
 //Funcion del comando interno exit
 
 void run_exit(struct execcmd * ecmd){
-	struct cmd * cmd = (struct cmd*) execcmd;
+	struct cmd * cmd = (struct cmd*) ecmd;
 	free_cmd(cmd);
-	
+	free(cmd);
+	exit(1);
 }
 
 //Funcion del comando interno cwd
@@ -1112,9 +1133,6 @@ void run_cwd(){
 	printf("cwd: %s\n",path);
 
 }
-
-//Funcion del comando interno cd
-
 
 
 //Funcion para ejecutar comandos internos
@@ -1207,7 +1225,7 @@ int main(int argc, char** argv)
 
         // Libera la memoria de las estructuras `cmd`
         free_cmd(cmd);
-
+	free(cmd);
         // Libera la memoria de la línea de órdenes
         free(buf);
     }
@@ -1215,4 +1233,5 @@ int main(int argc, char** argv)
     DPRINTF(DBG_TRACE, "END\n");
 
     return 0;
+
 }
