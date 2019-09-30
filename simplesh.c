@@ -100,7 +100,7 @@ static const char WHITESPACE[] = " \t\r\n\v";
 static const char SYMBOLS[] = "<|>&;()";
 
 char pathAnterior[PATH_MAX];
-
+int std_out;
 
 /******************************************************************************
  * Funciones auxiliares
@@ -814,27 +814,50 @@ void run_cmd(struct cmd* cmd)
 
         case REDR:
             rcmd = (struct redrcmd*) cmd;
-            if (fork_or_panic("fork REDR") == 0)
-            {
-                TRY( close(rcmd->fd) );
+ 	    if (isInterno((struct execcmd*) rcmd->cmd)){
+		if ((std_out = dup(1)) == -1){
+		    perror("dup");
+                    exit(EXIT_FAILURE);
+		}
+		TRY( close(rcmd->fd) );
                 if ((fd = open(rcmd->file, rcmd->flags,rcmd->mode)) < 0)
                 {
                     perror("open");
                     exit(EXIT_FAILURE);
-                }
-
-                if (rcmd->cmd->type == EXEC){
-		    if (isInterno((struct execcmd*) rcmd->cmd))
+                }	
+	    	if (rcmd->cmd->type == EXEC)
 			exec_cmdInterno((struct execcmd*) rcmd->cmd);
-		    else
-			exec_cmd((struct execcmd*) rcmd->cmd);
-                }
-                else{
-                    run_cmd(rcmd->cmd);
+		else
+			run_cmd(rcmd->cmd);
+		//Se cierra el fichero creado para la redireccion
+		if (close(fd) == -1){
+		    perror("close");
+                    exit(EXIT_FAILURE);
 		}
-                exit(EXIT_SUCCESS);
-            }
-            TRY( wait(NULL) );
+		//Se vuelve a abrir la salida estandar
+		if (dup2(std_out,1) == -1){
+			perror("dup2");
+			exit(EXIT_FAILURE);
+		}
+	    } else {
+		if (fork_or_panic("fork REDR") == 0){
+                	TRY( close(rcmd->fd) );
+                	if ((fd = open(rcmd->file, rcmd->flags,rcmd->mode)) < 0){
+                    		perror("open");
+                    		exit(EXIT_FAILURE);
+                	}
+
+                	if (rcmd->cmd->type == EXEC){
+		    		exec_cmd((struct execcmd*) rcmd->cmd);
+                	}
+                	else{
+                    		run_cmd(rcmd->cmd);
+			}
+                	exit(EXIT_SUCCESS);
+            	}
+            	TRY( wait(NULL) );
+		
+	    }
             break;
 
         case LIST:
@@ -1101,7 +1124,7 @@ char* get_cmd()
 	char * dir = basename(path);
 	char prompt[strlen(user)+strlen(dir)+4];
 
-	sprintf(prompt,"%s@<%s>",user,dir);
+	sprintf(prompt,"%s@<%s> ",user,dir);
     // Lee la orden tecleada por el usuario
     //buf = readline("simplesh> ");
 	buf = readline(prompt);
@@ -1124,7 +1147,7 @@ void run_exit(struct execcmd * ecmd){
 	struct cmd * cmd = (struct cmd*) ecmd;
 	free_cmd(cmd);
 	free(cmd);
-	exit(1);
+	exit(0);
 }
 
 //Funcion del comando interno cwd
@@ -1175,8 +1198,12 @@ void run_cd(struct execcmd * ecmd){
 	else {
 		char path[PATH_MAX];
 		getcwd(path,PATH_MAX);
-		setenv("OLDPWD", path, 1);
-		chdir(ecmd->argv[1]);
+		if (chdir(ecmd->argv[1]) != 0){
+			perror("run_cd");
+			//exit(EXIT_FAILURE);
+		}else {
+			setenv("OLDPWD", path, 1);
+		}
 	}
 
 }
