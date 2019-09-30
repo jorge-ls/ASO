@@ -1198,8 +1198,12 @@ void run_cd(struct execcmd * ecmd){
 	else {
 		char path[PATH_MAX];
 		getcwd(path,PATH_MAX);
-		if (chdir(ecmd->argv[1]) != 0){
-			perror("run_cd");
+		if (ecmd->argv[2] != NULL){
+			printf("run_cd: Demasiados argumentos\n");
+		}
+		else if (chdir(ecmd->argv[1]) != 0){
+			//perror("run_cd");
+			printf("run_cd: No existe el directorio '%s'\r\n",ecmd->argv[1]);
 			//exit(EXIT_FAILURE);
 		}else {
 			setenv("OLDPWD", path, 1);
