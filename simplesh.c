@@ -1219,6 +1219,7 @@ void run_psplit(struct execcmd * ecmd){
     char opt;
     int numLineas;
     int numBytes;
+    int bytesLeidos;
     while ((opt = getopt(ecmd->argc, ecmd->argv, "l:b:s:p:h")) != -1) { //Parametro con : quiere decir que va seguido de un valor
         switch (opt) {
             case 'l':
@@ -1234,7 +1235,7 @@ void run_psplit(struct execcmd * ecmd){
 
 		break;
 	    case 'h':
-		printf("Uso: %s [-l] [-l NUM] [-b NUM] [-s NUM] [-p NUM] [-h] [FILE1] [FILE2]...\n", ecmd->argv[0]);
+		printf("Uso: %s [-l NUM] [-b NUM] [-s NUM] [-p NUM] [-h] [FILE1] [FILE2]...\n", ecmd->argv[0]);
 		printf("\tOpciones:\n");
 		printf("\t-l NLINES Número maximo de lineas por fichero.\n");
 		printf("\t-b NBYTES Número máximo de bytes por fichero\n");
@@ -1247,7 +1248,28 @@ void run_psplit(struct execcmd * ecmd){
                 exit(EXIT_FAILURE);
         }
     }
-    for(int i = optind; i < ecmd->argc; i++) printf("%s\n", ecmd->argv[i]);
+    for(int i = optind; i < ecmd->argc; i++){
+	if (numLineas != 0 && numBytes!= 0){
+		printf("psplit: Opciones incompatibles\n");
+	}
+	else if (numLineas != 0){
+
+	}
+	else if (numBytes != 0){
+		char * buffer[numBytes];
+		int numFile = 0;
+		char newFile[50];
+		int fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU);
+		while ((bytesLeidos = read(fd,buffer,numBytes)) != 0){
+			sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
+			int subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
+			write(subfd,buffer,numBytes);
+			numFile++;
+		}
+		
+	}
+	//printf("%s\n", ecmd->argv[i]);
+    }	 
 
 }
 
