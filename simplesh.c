@@ -89,10 +89,10 @@ static int g_dbg_level = 0;
 // Número máximo de argumentos de un comando
 #define MAX_ARGS 16
 //Número de comandos internos
-#define NUM_INTERNOS 3
+#define NUM_INTERNOS 4
 
 //Array de comandos internos
-const char * cmdInternos[NUM_INTERNOS] = {"cwd","cd","exit"};
+const char * cmdInternos[NUM_INTERNOS] = {"cwd","cd","exit","psplit"};
 
 // Delimitadores
 static const char WHITESPACE[] = " \t\r\n\v";
@@ -1199,7 +1199,7 @@ void run_cd(struct execcmd * ecmd){
 		char path[PATH_MAX];
 		getcwd(path,PATH_MAX);
 		if (ecmd->argv[2] != NULL){
-			printf("run_cd: Demasiados argumentos\n");
+			printf("run_cd: Demasiados argumentos\r\n");
 		}
 		else if (chdir(ecmd->argv[1]) != 0){
 			//perror("run_cd");
@@ -1209,6 +1209,45 @@ void run_cd(struct execcmd * ecmd){
 			setenv("OLDPWD", path, 1);
 		}
 	}
+
+}
+
+//Funcion del comando interno psplit 
+
+void run_psplit(struct execcmd * ecmd){
+    optind = 1;
+    char opt;
+    int numLineas;
+    int numBytes;
+    while ((opt = getopt(ecmd->argc, ecmd->argv, "l:b:s:p:h")) != -1) { //Parametro con : quiere decir que va seguido de un valor
+        switch (opt) {
+            case 'l':
+                numLineas = atoi(optarg);
+                break;
+            case 'b':
+                numBytes = atoi(optarg);
+                break;
+	    case 's':
+
+		break;
+	    case 'p':
+
+		break;
+	    case 'h':
+		printf("Uso: %s [-l] [-l NUM] [-b NUM] [-s NUM] [-p NUM] [-h] [FILE1] [FILE2]...\n", ecmd->argv[0]);
+		printf("\tOpciones:\n");
+		printf("\t-l NLINES Número maximo de lineas por fichero.\n");
+		printf("\t-b NBYTES Número máximo de bytes por fichero\n");
+		printf("\t-s BSIZE  Tamaño en bytes de los bloques leidos de [FILEn] o stdin\n");
+		printf("\t-p PROCS  Número máximo de procesos simultáneos\n");
+		printf("\t-h        Ayuda\n");
+		break;
+            default:
+                fprintf(stderr, "Usage: %s [-l] [-l NUM] [-b NUM] [-s NUM] [-p NUM] [-h]\n", ecmd->argv[0]);
+                exit(EXIT_FAILURE);
+        }
+    }
+    for(int i = optind; i < ecmd->argc; i++) printf("%s\n", ecmd->argv[i]);
 
 }
 
@@ -1225,6 +1264,9 @@ void exec_cmdInterno(struct execcmd * ecmd){
 	}
 	else if (strcmp(ecmd->argv[0], "cd") == 0) {
 		run_cd(ecmd);
+	}
+	else if (strcmp(ecmd->argv[0], "psplit") == 0) {
+		run_psplit(ecmd);
 	}
 }
 
