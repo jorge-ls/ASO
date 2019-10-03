@@ -1219,7 +1219,7 @@ void run_psplit(struct execcmd * ecmd){
     char opt;
     int numLineas = 0;
     int numBytes = 0;
-    int bsize = 0;
+    int bsize = 1024;
     int subfd = 0;
     int bytesLeidos;
     char * buffer = NULL;
@@ -1268,13 +1268,13 @@ void run_psplit(struct execcmd * ecmd){
 	if (numLineas != 0 && numBytes!= 0){
 		printf("psplit: Opciones incompatibles\n");
 	}
-	else if (bsize != 0){
+	else {
 		buffer = malloc(bsize * sizeof(char));
 		int numFile = 0;
 		char newFile[50];
 		int fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU);
 		while ((bytesLeidos = read(fd,buffer,bsize)) != 0){
-			if (numBytes != 0){
+			if (numBytes != 0){ //Caso en el que hay limite en el numero de bytes
 				sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
 				subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
 				/*while (write(subfd,buffer,numBytes) != 0){
@@ -1285,10 +1285,10 @@ void run_psplit(struct execcmd * ecmd){
 				}*/
 					
 			}
-			else if (numLineas != 0){
+			else if (numLineas != 0){ // Caso en el que hay limite en el numero de lineas
 
 			}
-			else if (numBytes == 0 && numLineas == 0){
+			else if (numBytes == 0 && numLineas == 0){ 
 				sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
 				subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
 				write(subfd,buffer,bsize);
@@ -1301,6 +1301,7 @@ void run_psplit(struct execcmd * ecmd){
 		
 		
 	}
+	free(buffer);
 	//printf("%s\n", ecmd->argv[i]);
     }	 
     
