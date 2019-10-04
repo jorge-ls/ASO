@@ -1219,6 +1219,7 @@ void run_psplit(struct execcmd * ecmd){
     char opt;
     int numLineas = 0;
     int numBytes = 0;
+    int nBytesTotales = 0;
     int bsize = 1024;
     int subfd = 0;
     int bytesLeidos;
@@ -1277,17 +1278,20 @@ void run_psplit(struct execcmd * ecmd){
 		int numFile = 0;
 		char newFile[50];
 		int fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU);
-		if (numBytes != 0){ //Caso en el que hay limite en el numero de bytes
+		if (numBytes != 0){ //Caso en el que hay limite en el número de bytes
 			while ((bytesLeidos = read(fd,buffer,bsize)) != 0){		
 				sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
-				while (buffer[0] != '\0'){
+				while (nBytesTotales < bsize){
 					sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
 					subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
 					write(subfd,buffer,numBytes);
 					numFile++;
 					buffer += numBytes;
+					nBytesTotales += numBytes;
+					
 				}
-				
+				buffer -= nBytesTotales;
+				nBytesTotales = 0;
 			}
 					
 		}
@@ -1305,7 +1309,7 @@ void run_psplit(struct execcmd * ecmd){
 		}
 				
 	}
-	//free(buffer);
+	free(buffer);
 	//printf("%s\n", ecmd->argv[i]);
     }	 
     
