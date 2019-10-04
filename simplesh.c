@@ -1270,38 +1270,42 @@ void run_psplit(struct execcmd * ecmd){
 	}
 	else {
 		buffer = malloc(bsize * sizeof(char));
+		if (buffer == NULL){
+			printf("Fallo al reservar memoria con malloc\n");
+			exit(EXIT_FAILURE);
+		}
 		int numFile = 0;
 		char newFile[50];
 		int fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU);
-		while ((bytesLeidos = read(fd,buffer,bsize)) != 0){
-			if (numBytes != 0){ //Caso en el que hay limite en el numero de bytes
+		if (numBytes != 0){ //Caso en el que hay limite en el numero de bytes
+			while ((bytesLeidos = read(fd,buffer,bsize)) != 0){		
 				sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
-				subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
-				/*while (write(subfd,buffer,numBytes) != 0){
-					numFile++;
+				while (buffer[0] != '\0'){
 					sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
 					subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
-					
-				}*/
-					
+					write(subfd,buffer,numBytes);
+					numFile++;
+					buffer += numBytes;
+				}
+				
 			}
-			else if (numLineas != 0){ // Caso en el que hay limite en el numero de lineas
+					
+		}
+		else if (numLineas != 0){ // Caso en el que hay limite en el numero de lineas
 
-			}
-			else if (numBytes == 0 && numLineas == 0){ 
+		}
+		else if (numBytes == 0 && numLineas == 0){
+			while ((bytesLeidos = read(fd,buffer,bsize)) != 0){ 
 				sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
 				subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
 				write(subfd,buffer,bsize);
 				close(subfd);
 				numFile++;
 			}
-				
 		}
-		
-		
-		
+				
 	}
-	free(buffer);
+	//free(buffer);
 	//printf("%s\n", ecmd->argv[i]);
     }	 
     
