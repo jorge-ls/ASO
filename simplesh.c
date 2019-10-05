@@ -1252,7 +1252,7 @@ void run_psplit(struct execcmd * ecmd){
 		break;
             default:
                 fprintf(stderr, "Usage: %s [-l] [-l NUM] [-b NUM] [-s NUM] [-p NUM] [-h]\n", ecmd->argv[0]);
-                exit(EXIT_FAILURE);
+                break;
         }
     }
     if (optind == ecmd->argc){  //No hay ficheros de entrada
@@ -1274,6 +1274,9 @@ void run_psplit(struct execcmd * ecmd){
 	else if (bsize <= 1 || bsize >= pow(2,20)){
 		printf("psplit: Opcion -s no válida\n");
 	}
+	/*else if (bsize > tamFichero){ ¿Se debe tratar este caso? DUDA
+		printf("El tamaño del buffer es mayor que el tamaño del fichero\n");
+	}*/ 
 	else {
 		buffer = malloc(bsize * sizeof(char));
 		if (buffer == NULL){
@@ -1307,12 +1310,13 @@ void run_psplit(struct execcmd * ecmd){
 					}
 					numFile++;
 					close(subfd);
-					
+					fsync(subfd);
 				}
-				
 				buffer -= nBytesTotales;
 				nBytesTotales = 0;
 			}
+			close(fd);
+			fsync(fd);
 					
 		}
 		else if (numLineas != 0){ // Caso en el que hay limite en el numero de lineas
@@ -1329,8 +1333,11 @@ void run_psplit(struct execcmd * ecmd){
 					write(subfd,buffer,bsize);
 				bytesRestantes -= bsize;
 				close(subfd);
+				fsync(subfd);
 				numFile++;
 			}
+			close(fd);
+			fsync(fd);
 		}
 				
 	}
