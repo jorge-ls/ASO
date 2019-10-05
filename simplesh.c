@@ -825,7 +825,7 @@ void run_cmd(struct cmd* cmd)
                 {
                     perror("open");
                     exit(EXIT_FAILURE);
-                }	
+                }
 	    	if (rcmd->cmd->type == EXEC)
 			exec_cmdInterno((struct execcmd*) rcmd->cmd);
 		else
@@ -857,7 +857,7 @@ void run_cmd(struct cmd* cmd)
                 	exit(EXIT_SUCCESS);
             	}
             	TRY( wait(NULL) );
-		
+
 	    }
             break;
 
@@ -1213,7 +1213,7 @@ void run_cd(struct execcmd * ecmd){
 
 }
 
-//Funcion del comando interno psplit 
+//Funcion del comando interno psplit
 
 void run_psplit(struct execcmd * ecmd){
     optind = 1;
@@ -1228,7 +1228,7 @@ void run_psplit(struct execcmd * ecmd){
     int lineasLeidas;
     int bytesRestantes = 0;
     char * buffer = NULL;
-    
+
     while ((opt = getopt(ecmd->argc, ecmd->argv, "l:b:s:p:h")) != -1) { //Parametro con : quiere decir que va seguido de un valor
         switch (opt) {
             case 'l':
@@ -1265,7 +1265,7 @@ void run_psplit(struct execcmd * ecmd){
 
 	}
 	else if (numBytes != 0){
-		
+
 	}*/
     }
     //Procesamiento de ficheros de entrada
@@ -1278,7 +1278,7 @@ void run_psplit(struct execcmd * ecmd){
 	}
 	/*else if (bsize > tamFichero){ ¿Se debe tratar este caso? DUDA
 		printf("El tamaño del buffer es mayor que el tamaño del fichero\n");
-	}*/ 
+	}*/
 	else {
 		buffer = malloc(bsize * sizeof(char));
 		if (buffer == NULL){
@@ -1289,14 +1289,12 @@ void run_psplit(struct execcmd * ecmd){
 		char newFile[50];
 		int fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU);
 
-		if (numBytes != 0){ //Caso en el que hay limite en el numero de bytes
-
 		off_t tamFichero = lseek(fd,0,SEEK_END);
 		lseek(fd,0,SEEK_SET);
 		if (numBytes != 0){ //Caso en el que hay limite en el número de bytes
 			bytesRestantes = tamFichero;
 
-			while ((bytesLeidos = read(fd,buffer,bsize)) != 0){		
+			while ((bytesLeidos = read(fd,buffer,bsize)) != 0){
 				sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
 				if (bytesRestantes < bsize){
 					bsize = bytesRestantes;
@@ -1310,9 +1308,9 @@ void run_psplit(struct execcmd * ecmd){
 					if (bytesRestantes < numBytes){
 						write(subfd,buffer,bytesRestantes);
 						buffer += bytesRestantes;
-						nBytesTotales += bytesRestantes;	
+						nBytesTotales += bytesRestantes;
 					}else{
-						write(subfd,buffer,numBytes);	 
+						write(subfd,buffer,numBytes);
 						buffer += numBytes;
 						nBytesTotales += numBytes;
 						bytesRestantes -= numBytes;
@@ -1327,12 +1325,12 @@ void run_psplit(struct execcmd * ecmd){
 			}
 			close(fd);
 			fsync(fd);
-					
+
 		}
 		else if (numLineas != 0){ // Caso en el que hay limite en el numero de lineas
 			sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
-			subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);	
-			while ((bytesLeidos = read(fd,buffer,bsize)) != 0) {	
+			subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
+			while ((bytesLeidos = read(fd,buffer,bsize)) != 0) {
 				while (nBytesTotales < bsize) {
 					while (buffer[0]!='\n' && buffer[0]!='\0') {
 						write(subfd, buffer, 1);
@@ -1347,22 +1345,22 @@ void run_psplit(struct execcmd * ecmd){
 						if (nLineasTotales == numLineas) {
 							numFile++;
 							sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
-							subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);	
+							subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
 							nLineasTotales = 0;
 						}
-					} else 
+					} else
 						break;
 				}
 				buffer-=nBytesTotales;
 				nBytesTotales = 0;
 			}
 
-		
+
 		}
 
 		else if (numBytes == 0 && numLineas == 0){
 			bytesRestantes = tamFichero;
-			while ((bytesLeidos = read(fd,buffer,bsize)) != 0){ 
+			while ((bytesLeidos = read(fd,buffer,bsize)) != 0){
 				sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
 				subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
 				if (bytesRestantes < bsize)
@@ -1377,12 +1375,12 @@ void run_psplit(struct execcmd * ecmd){
 			close(fd);
 			fsync(fd);
 		}
-				
+
 	}
 	free(buffer);
 	//printf("%s\n", ecmd->argv[i]);
-    }	 
-    
+    }
+
 }
 
 
@@ -1464,10 +1462,10 @@ int main(int argc, char** argv)
 
     DPRINTF(DBG_TRACE, "STR\n");
 
-    // Bucle de lectura y ejecuciÃ³n de Ã³rdenes
+    // Bucle de lectura y ejecucion de ordenes
     while ((buf = get_cmd()) != NULL)
     {
-        // Realiza el anÃ¡lisis sintÃ¡ctico de la lÃ­nea de Ã³rdenes
+        // Realiza el analisis sintactico de la linea de ordenes
         cmd = parse_cmd(buf);
 
         // Termina en `NULL` todas las cadenas de las estructuras `cmd`
@@ -1478,13 +1476,13 @@ int main(int argc, char** argv)
                  __FILE__, __LINE__, __func__);
             print_cmd(cmd); printf("\n"); fflush(NULL); } );
 
-        // Ejecuta la lÃ­nea de Ã³rdenes
+        // Ejecuta la li�nea de ordenes
         run_cmd(cmd);
 
         // Libera la memoria de las estructuras `cmd`
         free_cmd(cmd);
 	free(cmd);
-        // Libera la memoria de la lÃ­nea de Ã³rdenes
+        // Libera la memoria de la li�nea de ordenes
         free(buf);
     }
 
