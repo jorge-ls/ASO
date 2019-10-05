@@ -1289,17 +1289,27 @@ void run_psplit(struct execcmd * ecmd){
 			bytesRestantes = tamFichero;
 			while ((bytesLeidos = read(fd,buffer,bsize)) != 0){		
 				sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
+				if (bytesRestantes < bsize){
+					bsize = bytesRestantes;
+				}
 				while (nBytesTotales < bsize){
 					sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
 					subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
-					write(subfd,buffer,numBytes);
+					if (bytesRestantes < numBytes){
+						write(subfd,buffer,bytesRestantes);
+						buffer += bytesRestantes;
+						nBytesTotales += bytesRestantes;	
+					}else{
+						write(subfd,buffer,numBytes);	 
+						buffer += numBytes;
+						nBytesTotales += numBytes;
+						bytesRestantes -= numBytes;
+					}
 					numFile++;
 					close(subfd);
-					buffer += numBytes;
-					nBytesTotales += numBytes;
 					
 				}
-				bytesRestantes -= bsize;
+				
 				buffer -= nBytesTotales;
 				nBytesTotales = 0;
 			}
