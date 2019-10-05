@@ -1,9 +1,9 @@
 /*
  * Shell `simplesh` (basado en el shell de xv6)
  *
- * Ampliación de Sistemas Operativos
- * Departamento de Ingeniería y Tecnología de Computadores
- * Facultad de Informática de la Universidad de Murcia
+ * AmpliaciÃ³n de Sistemas Operativos
+ * Departamento de IngenierÃ­a y TecnologÃ­a de Computadores
+ * Facultad de InformÃ¡tica de la Universidad de Murcia
  *
  * Alumnos: APELLIDOS, NOMBRE (GX.X)
  *          APELLIDOS, NOMBRE (GX.X)
@@ -17,7 +17,7 @@
  */
 
 
-#define _POSIX_C_SOURCE 200809L /* IEEE 1003.1-2008 (véase /usr/include/features.h) */
+#define _POSIX_C_SOURCE 200809L /* IEEE 1003.1-2008 (vÃ©ase /usr/include/features.h) */
 //#define NDEBUG                /* Traduce asertos y DMACROS a 'no ops' */
 
 #include <assert.h>
@@ -49,7 +49,7 @@
 
 static const char* VERSION = "0.19";
 
-// Niveles de depuración
+// Niveles de depuraciÃ³n
 #define DBG_CMD   (1 << 0)
 #define DBG_TRACE (1 << 1)
 // . . .
@@ -86,9 +86,9 @@ static int g_dbg_level = 0;
     } while( 0 )
 
 
-// Número máximo de argumentos de un comando
+// NÃºmero mÃ¡ximo de argumentos de un comando
 #define MAX_ARGS 16
-//Número de comandos internos
+//NÃºmero de comandos internos
 #define NUM_INTERNOS 4
 
 //Array de comandos internos
@@ -131,7 +131,7 @@ void error(const char *fmt, ...)
 }
 
 
-// Imprime el mensaje de error y aborta la ejecución
+// Imprime el mensaje de error y aborta la ejecuciÃ³n
 void panic(const char *fmt, ...)
 {
     va_list arg;
@@ -162,8 +162,8 @@ int fork_or_panic(const char* s)
  ******************************************************************************/
 
 
-// Las estructuras `cmd` se utilizan para almacenar información que servirá a
-// simplesh para ejecutar líneas de órdenes con redirecciones, tuberías, listas
+// Las estructuras `cmd` se utilizan para almacenar informaciÃ³n que servirÃ¡ a
+// simplesh para ejecutar lÃ­neas de Ã³rdenes con redirecciones, tuberÃ­as, listas
 // de comandos y tareas en segundo plano. El formato es el siguiente:
 
 //     |----------+--------------+--------------|
@@ -172,16 +172,16 @@ int fork_or_panic(const char* s)
 //     | type     | otros campos | otros campos |
 //     |----------+--------------+--------------|
 
-// Nótese cómo las estructuras `cmd` comparten el primer campo `type` para
-// identificar su tipo. A partir de él se obtiene un tipo derivado a través de
-// *casting* forzado de tipo. Se consigue así polimorfismo básico en C.
+// NÃ³tese cÃ³mo las estructuras `cmd` comparten el primer campo `type` para
+// identificar su tipo. A partir de Ã©l se obtiene un tipo derivado a travÃ©s de
+// *casting* forzado de tipo. Se consigue asÃ­ polimorfismo bÃ¡sico en C.
 
 // Valores del campo `type` de las estructuras de datos `cmd`
 enum cmd_type { EXEC=1, REDR=2, PIPE=3, LIST=4, BACK=5, SUBS=6, INV=7 };
 
 struct cmd { enum cmd_type type; };
 
-// Comando con sus parámetros
+// Comando con sus parÃ¡metros
 struct execcmd {
     enum cmd_type type;
     char* argv[MAX_ARGS];
@@ -189,7 +189,7 @@ struct execcmd {
     int argc;
 };
 
-// Comando con redirección
+// Comando con redirecciÃ³n
 struct redrcmd {
     enum cmd_type type;
     struct cmd* cmd;
@@ -200,14 +200,14 @@ struct redrcmd {
     int fd;
 };
 
-// Comandos con tubería
+// Comandos con tuberÃ­a
 struct pipecmd {
     enum cmd_type type;
     struct cmd* left;
     struct cmd* right;
 };
 
-// Lista de órdenes
+// Lista de Ã³rdenes
 struct listcmd {
     enum cmd_type type;
     struct cmd* left;
@@ -344,7 +344,7 @@ struct cmd* subscmd(struct cmd* subcmd)
 
 
 /******************************************************************************
- * Funciones para realizar el análisis sintáctico de la línea de órdenes
+ * Funciones para realizar el anÃ¡lisis sintÃ¡ctico de la lÃ­nea de Ã³rdenes
  ******************************************************************************/
 
 
@@ -398,7 +398,7 @@ int get_token(char** start_of_str, char const* end_of_str,
             // `'a'`, `start_of_token` apunta al argumento (si no es `NULL`),
             // `end_of_token` apunta al final del argumento (si no es `NULL`) y
             // `start_of_str` avanza hasta que salta todos los espacios
-            // *después* del argumento. Por ejemplo:
+            // *despuÃ©s* del argumento. Por ejemplo:
             //
             //     |-----------+---+---+---+---+---+---+---+---+---+-----------|
             //     | (espacio) | a | r | g | u | m | e | n | t | o | (espacio)
@@ -434,11 +434,11 @@ int get_token(char** start_of_str, char const* end_of_str,
 // puntero al final de esa cadena (`end_of_str`) y un conjunto de caracteres
 // (`delimiter`).
 //
-// El primer puntero pasado como parámero (`start_of_str`) avanza hasta el
-// primer carácter que no está en el conjunto de caracteres `WHITESPACE`.
+// El primer puntero pasado como parÃ¡mero (`start_of_str`) avanza hasta el
+// primer carÃ¡cter que no estÃ¡ en el conjunto de caracteres `WHITESPACE`.
 //
 // `peek` devuelve un valor distinto de `NULL` si encuentra alguno de los
-// caracteres en `delimiter` justo después de los caracteres en `WHITESPACE`.
+// caracteres en `delimiter` justo despuÃ©s de los caracteres en `WHITESPACE`.
 
 int peek(char** start_of_str, char const* end_of_str, char* delimiter)
 {
@@ -462,7 +462,7 @@ struct cmd* parse_redr(struct cmd*, char**, char*);
 struct cmd* null_terminate(struct cmd*);
 
 
-// `parse_cmd` realiza el *análisis sintáctico* de la línea de órdenes
+// `parse_cmd` realiza el *anÃ¡lisis sintÃ¡ctico* de la lÃ­nea de Ã³rdenes
 // introducida por el usuario.
 //
 // `parse_cmd` utiliza `parse_line` para obtener una estructura `cmd`.
@@ -478,10 +478,10 @@ struct cmd* parse_cmd(char* start_of_str)
 
     cmd = parse_line(&start_of_str, end_of_str);
 
-    // Comprueba que se ha alcanzado el final de la línea de órdenes
+    // Comprueba que se ha alcanzado el final de la lÃ­nea de Ã³rdenes
     peek(&start_of_str, end_of_str, "");
     if (start_of_str != end_of_str)
-        error("%s: error sintáctico: %s\n", __func__);
+        error("%s: error sintÃ¡ctico: %s\n", __func__);
 
     DPRINTF(DBG_TRACE, "END\n");
 
@@ -489,14 +489,14 @@ struct cmd* parse_cmd(char* start_of_str)
 }
 
 
-// `parse_line` realiza el análisis sintáctico de la línea de órdenes
+// `parse_line` realiza el anÃ¡lisis sintÃ¡ctico de la lÃ­nea de Ã³rdenes
 // introducida por el usuario.
 //
-// `parse_line` comprueba en primer lugar si la línea contiene alguna tubería.
+// `parse_line` comprueba en primer lugar si la lÃ­nea contiene alguna tuberÃ­a.
 // Para ello `parse_line` llama a `parse_pipe` que a su vez verifica si hay
-// bloques de órdenes y/o redirecciones.  A continuación, `parse_line`
-// comprueba si la ejecución de la línea se realiza en segundo plano (con `&`)
-// o si la línea de órdenes contiene una lista de órdenes (con `;`).
+// bloques de Ã³rdenes y/o redirecciones.  A continuaciÃ³n, `parse_line`
+// comprueba si la ejecuciÃ³n de la lÃ­nea se realiza en segundo plano (con `&`)
+// o si la lÃ­nea de Ã³rdenes contiene una lista de Ã³rdenes (con `;`).
 
 struct cmd* parse_line(char** start_of_str, char* end_of_str)
 {
@@ -518,9 +518,9 @@ struct cmd* parse_line(char** start_of_str, char* end_of_str)
     if (peek(start_of_str, end_of_str, ";"))
     {
         if (cmd->type == EXEC && ((struct execcmd*) cmd)->argv[0] == 0)
-            error("%s: error sintáctico: no se encontró comando\n", __func__);
+            error("%s: error sintÃ¡ctico: no se encontrÃ³ comando\n", __func__);
 
-        // Consume el delimitador de lista de órdenes
+        // Consume el delimitador de lista de Ã³rdenes
         delimiter = get_token(start_of_str, end_of_str, 0, 0);
         assert(delimiter == ';');
 
@@ -532,11 +532,11 @@ struct cmd* parse_line(char** start_of_str, char* end_of_str)
 }
 
 
-// `parse_pipe` realiza el análisis sintáctico de una tubería de manera
-// recursiva si encuentra el delimitador de tuberías '|'.
+// `parse_pipe` realiza el anÃ¡lisis sintÃ¡ctico de una tuberÃ­a de manera
+// recursiva si encuentra el delimitador de tuberÃ­as '|'.
 //
 // `parse_pipe` llama a `parse_exec` y `parse_pipe` de manera recursiva para
-// realizar el análisis sintáctico de todos los componentes de la tubería.
+// realizar el anÃ¡lisis sintÃ¡ctico de todos los componentes de la tuberÃ­a.
 
 struct cmd* parse_pipe(char** start_of_str, char* end_of_str)
 {
@@ -548,13 +548,13 @@ struct cmd* parse_pipe(char** start_of_str, char* end_of_str)
     if (peek(start_of_str, end_of_str, "|"))
     {
         if (cmd->type == EXEC && ((struct execcmd*) cmd)->argv[0] == 0)
-            error("%s: error sintáctico: no se encontró comando\n", __func__);
+            error("%s: error sintÃ¡ctico: no se encontrÃ³ comando\n", __func__);
 
-        // Consume el delimitador de tubería
+        // Consume el delimitador de tuberÃ­a
         delimiter = get_token(start_of_str, end_of_str, 0, 0);
         assert(delimiter == '|');
 
-        // Construye el `cmd` para la tubería
+        // Construye el `cmd` para la tuberÃ­a
         cmd = pipecmd(cmd, parse_pipe(start_of_str, end_of_str));
     }
 
@@ -562,10 +562,10 @@ struct cmd* parse_pipe(char** start_of_str, char* end_of_str)
 }
 
 
-// `parse_exec` realiza el análisis sintáctico de un comando a no ser que la
-// expresión comience por un paréntesis, en cuyo caso se llama a `parse_subs`.
+// `parse_exec` realiza el anÃ¡lisis sintÃ¡ctico de un comando a no ser que la
+// expresiÃ³n comience por un parÃ©ntesis, en cuyo caso se llama a `parse_subs`.
 //
-// `parse_exec` reconoce las redirecciones antes y después del comando.
+// `parse_exec` reconoce las redirecciones antes y despuÃ©s del comando.
 
 struct cmd* parse_exec(char** start_of_str, char* end_of_str)
 {
@@ -575,17 +575,17 @@ struct cmd* parse_exec(char** start_of_str, char* end_of_str)
     struct execcmd* cmd;
     struct cmd* ret;
 
-    // ¿Inicio de un bloque?
+    // Â¿Inicio de un bloque?
     if (peek(start_of_str, end_of_str, "("))
         return parse_subs(start_of_str, end_of_str);
 
-    // Si no, lo primero que hay en una línea de órdenes es un comando
+    // Si no, lo primero que hay en una lÃ­nea de Ã³rdenes es un comando
 
     // Construye el `cmd` para el comando
     ret = execcmd();
     cmd = (struct execcmd*) ret;
 
-    // ¿Redirecciones antes del comando?
+    // Â¿Redirecciones antes del comando?
     ret = parse_redr(ret, start_of_str, end_of_str);
 
     // Bucle para separar los argumentos de las posibles redirecciones
@@ -599,7 +599,7 @@ struct cmd* parse_exec(char** start_of_str, char* end_of_str)
         // El siguiente token debe ser un argumento porque el bucle
         // para en los delimitadores
         if (token != 'a')
-            error("%s: error sintáctico: se esperaba un argumento\n", __func__);
+            error("%s: error sintÃ¡ctico: se esperaba un argumento\n", __func__);
 
         // Almacena el siguiente argumento reconocido. El primero es
         // el comando
@@ -609,11 +609,11 @@ struct cmd* parse_exec(char** start_of_str, char* end_of_str)
         if (argc >= MAX_ARGS)
             panic("%s: demasiados argumentos\n", __func__);
 
-        // ¿Redirecciones después del comando?
+        // Â¿Redirecciones despuÃ©s del comando?
         ret = parse_redr(ret, start_of_str, end_of_str);
     }
 
-    // El comando no tiene más parámetros
+    // El comando no tiene mÃ¡s parÃ¡metros
     cmd->argv[argc] = 0;
     cmd->eargv[argc] = 0;
 
@@ -621,10 +621,10 @@ struct cmd* parse_exec(char** start_of_str, char* end_of_str)
 }
 
 
-// `parse_subs` realiza el análisis sintáctico de un bloque de órdenes
-// delimitadas por paréntesis o `subshell` llamando a `parse_line`.
+// `parse_subs` realiza el anÃ¡lisis sintÃ¡ctico de un bloque de Ã³rdenes
+// delimitadas por parÃ©ntesis o `subshell` llamando a `parse_line`.
 //
-// `parse_subs` reconoce las redirecciones después del bloque de órdenes.
+// `parse_subs` reconoce las redirecciones despuÃ©s del bloque de Ã³rdenes.
 
 struct cmd* parse_subs(char** start_of_str, char* end_of_str)
 {
@@ -632,34 +632,34 @@ struct cmd* parse_subs(char** start_of_str, char* end_of_str)
     struct cmd* cmd;
     struct cmd* scmd;
 
-    // Consume el paréntesis de apertura
+    // Consume el parÃ©ntesis de apertura
     if (!peek(start_of_str, end_of_str, "("))
-        error("%s: error sintáctico: se esperaba '('", __func__);
+        error("%s: error sintÃ¡ctico: se esperaba '('", __func__);
     delimiter = get_token(start_of_str, end_of_str, 0, 0);
     assert(delimiter == '(');
 
-    // Realiza el análisis sintáctico hasta el paréntesis de cierre
+    // Realiza el anÃ¡lisis sintÃ¡ctico hasta el parÃ©ntesis de cierre
     scmd = parse_line(start_of_str, end_of_str);
 
-    // Construye el `cmd` para el bloque de órdenes
+    // Construye el `cmd` para el bloque de Ã³rdenes
     cmd = subscmd(scmd);
 
-    // Consume el paréntesis de cierre
+    // Consume el parÃ©ntesis de cierre
     if (!peek(start_of_str, end_of_str, ")"))
-        error("%s: error sintáctico: se esperaba ')'", __func__);
+        error("%s: error sintÃ¡ctico: se esperaba ')'", __func__);
     delimiter = get_token(start_of_str, end_of_str, 0, 0);
     assert(delimiter == ')');
 
-    // ¿Redirecciones después del bloque de órdenes?
+    // Â¿Redirecciones despuÃ©s del bloque de Ã³rdenes?
     cmd = parse_redr(cmd, start_of_str, end_of_str);
 
     return cmd;
 }
 
 
-// `parse_redr` realiza el análisis sintáctico de órdenes con
+// `parse_redr` realiza el anÃ¡lisis sintÃ¡ctico de Ã³rdenes con
 // redirecciones si encuentra alguno de los delimitadores de
-// redirección ('<' o '>').
+// redirecciÃ³n ('<' o '>').
 
 struct cmd* parse_redr(struct cmd* cmd, char** start_of_str, char* end_of_str)
 {
@@ -667,20 +667,20 @@ struct cmd* parse_redr(struct cmd* cmd, char** start_of_str, char* end_of_str)
     char* start_of_token;
     char* end_of_token;
 
-    // Si lo siguiente que hay a continuación es delimitador de
-    // redirección...
+    // Si lo siguiente que hay a continuaciÃ³n es delimitador de
+    // redirecciÃ³n...
     while (peek(start_of_str, end_of_str, "<>"))
     {
-        // Consume el delimitador de redirección
+        // Consume el delimitador de redirecciÃ³n
         delimiter = get_token(start_of_str, end_of_str, 0, 0);
         assert(delimiter == '<' || delimiter == '>' || delimiter == '+');
 
         // El siguiente token tiene que ser el nombre del fichero de la
-        // redirección entre `start_of_token` y `end_of_token`.
+        // redirecciÃ³n entre `start_of_token` y `end_of_token`.
         if ('a' != get_token(start_of_str, end_of_str, &start_of_token, &end_of_token))
-            error("%s: error sintáctico: se esperaba un fichero", __func__);
+            error("%s: error sintÃ¡ctico: se esperaba un fichero", __func__);
 
-        // Construye el `cmd` para la redirección
+        // Construye el `cmd` para la redirecciÃ³n
         switch(delimiter)
         {
             case '<':
@@ -766,7 +766,7 @@ void exec_cmdInterno(struct execcmd * ecmd);
 int isInterno(struct execcmd * ecmd);
 
 /******************************************************************************
- * Funciones para la ejecución de la línea de órdenes
+ * Funciones para la ejecuciÃ³n de la lÃ­nea de Ã³rdenes
  ******************************************************************************/
 
 
@@ -778,7 +778,7 @@ void exec_cmd(struct execcmd* ecmd)
 
     execvp(ecmd->argv[0], ecmd->argv);
 
-    panic("no se encontró el comando '%s'\n", ecmd->argv[0]);
+    panic("no se encontrÃ³ el comando '%s'\n", ecmd->argv[0]);
 }
 
 
@@ -874,7 +874,7 @@ void run_cmd(struct cmd* cmd)
                 exit(EXIT_FAILURE);
             }
 
-            // Ejecución del hijo de la izquierda
+            // EjecuciÃ³n del hijo de la izquierda
             if (fork_or_panic("fork PIPE left") == 0)
             {
                 TRY( close(STDOUT_FILENO) );
@@ -893,7 +893,7 @@ void run_cmd(struct cmd* cmd)
                 exit(EXIT_SUCCESS);
             }
 
-            // Ejecución del hijo de la derecha
+            // EjecuciÃ³n del hijo de la derecha
             if (fork_or_panic("fork PIPE right") == 0)
             {
                 TRY( close(STDIN_FILENO) );
@@ -1098,13 +1098,13 @@ void free_cmd(struct cmd* cmd)
 
 
 /******************************************************************************
- * Lectura de la línea de órdenes con la biblioteca libreadline
+ * Lectura de la lÃ­nea de Ã³rdenes con la biblioteca libreadline
  ******************************************************************************/
 
 
 // `get_cmd` muestra un *prompt* y lee lo que el usuario escribe usando la
-// biblioteca readline. Ésta permite mantener el historial, utilizar las flechas
-// para acceder a las órdenes previas del historial, búsquedas de órdenes, etc.
+// biblioteca readline. Ãsta permite mantener el historial, utilizar las flechas
+// para acceder a las Ã³rdenes previas del historial, bÃºsquedas de Ã³rdenes, etc.
 
 char* get_cmd()
 {
@@ -1220,9 +1220,11 @@ void run_psplit(struct execcmd * ecmd){
     int numLineas = 0;
     int numBytes = 0;
     int nBytesTotales = 0;
+    int nLineasTotales = 0;
     int bsize = 1024;
     int subfd = 0;
     int bytesLeidos;
+    int lineasLeidas;
     char * buffer = NULL;
     
     while ((opt = getopt(ecmd->argc, ecmd->argv, "l:b:s:p:h")) != -1) { //Parametro con : quiere decir que va seguido de un valor
@@ -1242,7 +1244,7 @@ void run_psplit(struct execcmd * ecmd){
 	    case 'h':
 		printf("Uso: %s [-l NUM] [-b NUM] [-s NUM] [-p NUM] [-h] [FILE1] [FILE2]...\n", ecmd->argv[0]);
 		printf("\tOpciones:\n");
-		printf("\t-l NLINES Número maximo de lineas por fichero.\n");
+		printf("\t-l NLINES Número máximo de lineas por fichero.\n");
 		printf("\t-b NBYTES Número máximo de bytes por fichero\n");
 		printf("\t-s BSIZE  Tamaño en bytes de los bloques leidos de [FILEn] o stdin\n");
 		printf("\t-p PROCS  Número máximo de procesos simultáneos\n");
@@ -1278,13 +1280,13 @@ void run_psplit(struct execcmd * ecmd){
 		int numFile = 0;
 		char newFile[50];
 		int fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU);
-		if (numBytes != 0){ //Caso en el que hay limite en el número de bytes
+		if (numBytes != 0){ //Caso en el que hay limite en el numero de bytes
 			while ((bytesLeidos = read(fd,buffer,bsize)) != 0){		
 				sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
 				while (nBytesTotales < bsize){
 					sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
 					subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
-					write(subfd,buffer,numBytes);
+					write(subfd, buffer, numBytes);
 					numFile++;
 					buffer += numBytes;
 					nBytesTotales += numBytes;
@@ -1296,8 +1298,36 @@ void run_psplit(struct execcmd * ecmd){
 					
 		}
 		else if (numLineas != 0){ // Caso en el que hay limite en el numero de lineas
+			sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
+			subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);	
+			while ((bytesLeidos = read(fd,buffer,bsize)) != 0) {	
+				while (nBytesTotales < bsize) {
+					while (buffer[0]!='\n' && buffer[0]!='\0') {
+						write(subfd, buffer, 1);
+						buffer++;
+						nBytesTotales++;
+					}
+					if (buffer[0] == '\n') {
+						write(subfd, buffer, 1);
+						buffer++;
+						nBytesTotales++;
+						nLineasTotales++;
+						if (nLineasTotales == numLineas) {
+							numFile++;
+							sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
+							subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);	
+							nLineasTotales = 0;
+						}
+					} else 
+						break;
+				}
+				buffer-=nBytesTotales;
+				nBytesTotales = 0;
+			}
 
+		
 		}
+
 		else if (numBytes == 0 && numLineas == 0){
 			while ((bytesLeidos = read(fd,buffer,bsize)) != 0){ 
 				sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
@@ -1368,7 +1398,7 @@ void parse_args(int argc, char** argv)
 {
     int option;
 
-    // Bucle de procesamiento de parámetros
+    // Bucle de procesamiento de parÃ¡metros
     while((option = getopt(argc, argv, "d:h")) != -1) {
         switch(option) {
             case 'd':
@@ -1394,10 +1424,10 @@ int main(int argc, char** argv)
 
     DPRINTF(DBG_TRACE, "STR\n");
 
-    // Bucle de lectura y ejecución de órdenes
+    // Bucle de lectura y ejecuciÃ³n de Ã³rdenes
     while ((buf = get_cmd()) != NULL)
     {
-        // Realiza el análisis sintáctico de la línea de órdenes
+        // Realiza el anÃ¡lisis sintÃ¡ctico de la lÃ­nea de Ã³rdenes
         cmd = parse_cmd(buf);
 
         // Termina en `NULL` todas las cadenas de las estructuras `cmd`
@@ -1408,13 +1438,13 @@ int main(int argc, char** argv)
                  __FILE__, __LINE__, __func__);
             print_cmd(cmd); printf("\n"); fflush(NULL); } );
 
-        // Ejecuta la línea de órdenes
+        // Ejecuta la lÃ­nea de Ã³rdenes
         run_cmd(cmd);
 
         // Libera la memoria de las estructuras `cmd`
         free_cmd(cmd);
 	free(cmd);
-        // Libera la memoria de la línea de órdenes
+        // Libera la memoria de la lÃ­nea de Ã³rdenes
         free(buf);
     }
 
