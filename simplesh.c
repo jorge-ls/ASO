@@ -34,6 +34,7 @@
 #include <pwd.h>
 #include <limits.h>
 #include <libgen.h>
+#include <math.h>
 
 
 
@@ -1224,7 +1225,11 @@ void run_psplit(struct execcmd * ecmd){
     int bsize = 1024;
     int subfd = 0;
     int bytesLeidos;
+<<<<<<< HEAD
     int lineasLeidas;
+=======
+    int bytesRestantes = 0;
+>>>>>>> ce4f1d7b4cd9dfdf0b599c5326a60ba99f210551
     char * buffer = NULL;
     
     while ((opt = getopt(ecmd->argc, ecmd->argv, "l:b:s:p:h")) != -1) { //Parametro con : quiere decir que va seguido de un valor
@@ -1252,7 +1257,7 @@ void run_psplit(struct execcmd * ecmd){
 		break;
             default:
                 fprintf(stderr, "Usage: %s [-l] [-l NUM] [-b NUM] [-s NUM] [-p NUM] [-h]\n", ecmd->argv[0]);
-                exit(EXIT_FAILURE);
+                break;
         }
     }
     if (optind == ecmd->argc){  //No hay ficheros de entrada
@@ -1271,6 +1276,12 @@ void run_psplit(struct execcmd * ecmd){
 	if (numLineas != 0 && numBytes!= 0){
 		printf("psplit: Opciones incompatibles\n");
 	}
+	else if (bsize <= 1 || bsize >= pow(2,20)){
+		printf("psplit: Opcion -s no válida\n");
+	}
+	/*else if (bsize > tamFichero){ ¿Se debe tratar este caso? DUDA
+		printf("El tamaño del buffer es mayor que el tamaño del fichero\n");
+	}*/ 
 	else {
 		buffer = malloc(bsize * sizeof(char));
 		if (buffer == NULL){
@@ -1280,21 +1291,45 @@ void run_psplit(struct execcmd * ecmd){
 		int numFile = 0;
 		char newFile[50];
 		int fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU);
+
 		if (numBytes != 0){ //Caso en el que hay limite en el numero de bytes
+
+		off_t tamFichero = lseek(fd,0,SEEK_END);
+		lseek(fd,0,SEEK_SET);
+		if (numBytes != 0){ //Caso en el que hay limite en el número de bytes
+			bytesRestantes = tamFichero;
+
 			while ((bytesLeidos = read(fd,buffer,bsize)) != 0){		
 				sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
+				if (bytesRestantes < bsize){
+					bsize = bytesRestantes;
+				}
 				while (nBytesTotales < bsize){
 					sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
 					subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
+
 					write(subfd, buffer, numBytes);
+
+					if (bytesRestantes < numBytes){
+						write(subfd,buffer,bytesRestantes);
+						buffer += bytesRestantes;
+						nBytesTotales += bytesRestantes;	
+					}else{
+						write(subfd,buffer,numBytes);	 
+						buffer += numBytes;
+						nBytesTotales += numBytes;
+						bytesRestantes -= numBytes;
+					}
+
 					numFile++;
-					buffer += numBytes;
-					nBytesTotales += numBytes;
-					
+					close(subfd);
+					fsync(subfd);
 				}
 				buffer -= nBytesTotales;
 				nBytesTotales = 0;
 			}
+			close(fd);
+			fsync(fd);
 					
 		}
 		else if (numLineas != 0){ // Caso en el que hay limite en el numero de lineas
@@ -1329,13 +1364,21 @@ void run_psplit(struct execcmd * ecmd){
 		}
 
 		else if (numBytes == 0 && numLineas == 0){
+			bytesRestantes = tamFichero;
 			while ((bytesLeidos = read(fd,buffer,bsize)) != 0){ 
 				sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
 				subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
-				write(subfd,buffer,bsize);
+				if (bytesRestantes < bsize)
+					write(subfd,buffer,bytesRestantes);
+				else
+					write(subfd,buffer,bsize);
+				bytesRestantes -= bsize;
 				close(subfd);
+				fsync(subfd);
 				numFile++;
 			}
+			close(fd);
+			fsync(fd);
 		}
 				
 	}
