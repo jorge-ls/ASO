@@ -1225,11 +1225,8 @@ void run_psplit(struct execcmd * ecmd){
     int bsize = 1024;
     int subfd = 0;
     int bytesLeidos;
-<<<<<<< HEAD
     int lineasLeidas;
-=======
     int bytesRestantes = 0;
->>>>>>> ce4f1d7b4cd9dfdf0b599c5326a60ba99f210551
     char * buffer = NULL;
     
     while ((opt = getopt(ecmd->argc, ecmd->argv, "l:b:s:p:h")) != -1) { //Parametro con : quiere decir que va seguido de un valor
