@@ -765,6 +765,8 @@ void run_cd(struct execcmd * ecmd);
 void run_cwd();
 void exec_cmdInterno(struct execcmd * ecmd);
 int isInterno(struct execcmd * ecmd);
+void run_psplit(struct execcmd * ecmd);
+void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero);
 
 /******************************************************************************
  * Funciones para la ejecución de la línea de órdenes
@@ -1213,6 +1215,107 @@ void run_cd(struct execcmd * ecmd){
 
 }
 
+void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero){
+	int nBytesTotales = 0;
+	int subfd = 0;
+    	int bytesLeidos;
+    	int bytesRestantes = 0;
+	int nLineasTotales = 0;
+	int lineasLeidas;
+    	char * buffer = NULL;
+	int numFile = 0;
+	char newFile[50];
+
+	buffer = malloc(bsize * sizeof(char));
+	if (buffer == NULL){
+		printf("Fallo al reservar memoria con malloc\n");
+		exit(EXIT_FAILURE);
+	}
+	off_t tamFichero = lseek(fd,0,SEEK_END);
+	lseek(fd,0,SEEK_SET);
+	if (numBytes != 0){ //Caso en el que hay limite en el número de bytes
+			bytesRestantes = tamFichero;
+			while ((bytesLeidos = read(fd,buffer,bsize)) != 0){		
+				sprintf(newFile,"%s%d",nombreFichero,numFile);
+				if (bytesRestantes < bsize){
+					bsize = bytesRestantes;
+				}
+				while (nBytesTotales < bsize){
+					sprintf(newFile,"%s%d",nombreFichero,numFile);
+					subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
+					if (bytesRestantes < numBytes){
+						write(subfd,buffer,bytesRestantes);
+						buffer += bytesRestantes;
+						nBytesTotales += bytesRestantes;	
+					}else{
+						write(subfd,buffer,numBytes);	 
+						buffer += numBytes;
+						nBytesTotales += numBytes;
+						bytesRestantes -= numBytes;
+					}
+					numFile++;
+					close(subfd);
+					fsync(subfd);
+				}
+				buffer -= nBytesTotales;
+				nBytesTotales = 0;
+			}
+			close(fd);
+			fsync(fd);
+					
+	}
+	else if (numLineas != 0){ // Caso en el que hay limite en el numero de lineas
+		sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
+		subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
+		while ((bytesLeidos = read(fd,buffer,bsize)) != 0) {
+			while (nBytesTotales < bsize) {
+					while (buffer[0]!='\n' && buffer[0]!='\0') {
+						write(subfd, buffer, 1);
+						buffer++;
+						nBytesTotales++;
+					}
+					if (buffer[0] == '\n') {
+						write(subfd, buffer, 1);
+						buffer++;
+						nBytesTotales++;
+						nLineasTotales++;
+						if (nLineasTotales == numLineas) {
+							numFile++;
+							sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
+							subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
+							nLineasTotales = 0;
+						}
+					} else
+						break;
+					}
+				buffer-=nBytesTotales;
+				nBytesTotales = 0;
+			}
+	}
+	else if (numBytes == 0 && numLineas == 0){
+		bytesRestantes = tamFichero;
+		while ((bytesLeidos = read(fd,buffer,bsize)) != 0){ 
+			sprintf(newFile,"%s%d",nombreFichero,numFile);
+			subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
+			if (bytesRestantes < bsize)
+				write(subfd,buffer,bytesRestantes);
+			else
+				write(subfd,buffer,bsize);
+			bytesRestantes -= bsize;
+			close(subfd);
+			fsync(subfd);
+			numFile++;
+		}
+		close(fd);
+		fsync(fd);
+	}
+				
+	free(buffer);
+	//printf("%s\n", ecmd->argv[i]);
+	
+	
+}
+
 //Funcion del comando interno psplit 
 
 void run_psplit(struct execcmd * ecmd){
@@ -1255,96 +1358,27 @@ void run_psplit(struct execcmd * ecmd){
                 break;
         }
     }
-    if (optind == ecmd->argc){  //No hay ficheros de entrada
-	/*if (numLineas != 0 && numBytes!= 0){
-		printf("psplit: Opciones incompatibles\n");
-	}
-	if (numLineas != 0){
-
-	}
-	else if (numBytes != 0){
-		
-	}*/
+    if (numLineas != 0 && numBytes!= 0){
+	printf("psplit: Opciones incompatibles\n");
     }
-    //Procesamiento de ficheros de entrada
-    for(int i = optind; i < ecmd->argc; i++){
-	if (numLineas != 0 && numBytes!= 0){
-		printf("psplit: Opciones incompatibles\n");
-	}
-	else if (bsize <= 1 || bsize >= pow(2,20)){
-		printf("psplit: Opcion -s no válida\n");
-	}
-	/*else if (bsize > tamFichero){ ¿Se debe tratar este caso? DUDA
-		printf("El tamaño del buffer es mayor que el tamaño del fichero\n");
-	}*/ 
-	else {
-		buffer = malloc(bsize * sizeof(char));
-		if (buffer == NULL){
-			printf("Fallo al reservar memoria con malloc\n");
-			exit(EXIT_FAILURE);
-		}
-		int numFile = 0;
-		char newFile[50];
+    else if (bsize <= 1 || bsize >= pow(2,20)){
+	printf("psplit: Opcion -s no válida\n");
+    }
+    /*else if (bsize > tamFichero){ ¿Se debe tratar este caso? DUDA
+	printf("El tamaño del buffer es mayor que el tamaño del fichero\n");
+    }*/ 
+    else if (optind == ecmd->argc){  //No hay ficheros de entrada
+	auxPsplit(numLineas,numBytes,bsize,0,"stdin");
+    }
+    else{
+	//Procesamiento de ficheros de entrada
+	for(int i = optind; i < ecmd->argc; i++){
 		int fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU);
-		off_t tamFichero = lseek(fd,0,SEEK_END);
-		lseek(fd,0,SEEK_SET);
-		if (numBytes != 0){ //Caso en el que hay limite en el número de bytes
-			bytesRestantes = tamFichero;
-			while ((bytesLeidos = read(fd,buffer,bsize)) != 0){		
-				sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
-				if (bytesRestantes < bsize){
-					bsize = bytesRestantes;
-				}
-				while (nBytesTotales < bsize){
-					sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
-					subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
-					if (bytesRestantes < numBytes){
-						write(subfd,buffer,bytesRestantes);
-						buffer += bytesRestantes;
-						nBytesTotales += bytesRestantes;	
-					}else{
-						write(subfd,buffer,numBytes);	 
-						buffer += numBytes;
-						nBytesTotales += numBytes;
-						bytesRestantes -= numBytes;
-					}
-					numFile++;
-					close(subfd);
-					fsync(subfd);
-				}
-				buffer -= nBytesTotales;
-				nBytesTotales = 0;
-			}
-			close(fd);
-			fsync(fd);
-					
-		}
-		else if (numLineas != 0){ // Caso en el que hay limite en el numero de lineas
-
-		}
-		else if (numBytes == 0 && numLineas == 0){
-			bytesRestantes = tamFichero;
-			while ((bytesLeidos = read(fd,buffer,bsize)) != 0){ 
-				sprintf(newFile,"%s%d",ecmd->argv[i],numFile);
-				subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
-				if (bytesRestantes < bsize)
-					write(subfd,buffer,bytesRestantes);
-				else
-					write(subfd,buffer,bsize);
-				bytesRestantes -= bsize;
-				close(subfd);
-				fsync(subfd);
-				numFile++;
-			}
-			close(fd);
-			fsync(fd);
-		}
-				
-	}
-	free(buffer);
-	//printf("%s\n", ecmd->argv[i]);
-    }	 
+		auxPsplit(numLineas,numBytes,bsize,fd,ecmd->argv[i]);
+    	}
+    }
     
+    	 
 }
 
 
