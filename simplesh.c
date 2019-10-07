@@ -91,7 +91,10 @@ static int g_dbg_level = 0;
 #define MAX_ARGS 16
 //NÃºmero de comandos internos
 #define NUM_INTERNOS 4
-
+//Tamaño minimo del buffer de lectura
+#define MIN_BSIZE 1
+//Tamaño maximo del bloque de lectura
+#define MAX_BSIZE pow(2,20)
 //Array de comandos internos
 const char * cmdInternos[NUM_INTERNOS] = {"cwd","cd","exit","psplit"};
 
@@ -1220,6 +1223,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 	int nBytesTotales = 0;
 	int subfd = 0;
     	int bytesLeidos;
+	int bytesEscritos;
     	int bytesRestantes = 0;
 	int nLineasTotales = 0;
 	int lineasLeidas;
@@ -1232,27 +1236,21 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 		printf("Fallo al reservar memoria con malloc\n");
 		exit(EXIT_FAILURE);
 	}
-	off_t tamFichero = lseek(fd,0,SEEK_END);
-	lseek(fd,0,SEEK_SET);
 	if (numBytes != 0){ //Caso en el que hay limite en el número de bytes
-			bytesRestantes = tamFichero;
 			while ((bytesLeidos = read(fd,buffer,bsize)) != 0){		
 				sprintf(newFile,"%s%d",nombreFichero,numFile);
-				if (bytesRestantes < bsize){
-					bsize = bytesRestantes;
-				}
-				while (nBytesTotales < bsize){
+				while (nBytesTotales < bytesLeidos){
 					sprintf(newFile,"%s%d",nombreFichero,numFile);
 					subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
-					if (bytesRestantes < numBytes){
-						write(subfd,buffer,bytesRestantes);
+					if (bytesLeidos - nBytesTotales < numBytes){
+						bytesRestantes = bytesLeidos - nBytesTotales;
+						bytesEscritos = write(subfd,buffer,bytesRestantes);
 						buffer += bytesRestantes;
-						nBytesTotales += bytesRestantes;	
+						nBytesTotales += bytesRestantes;
 					}else{
-						write(subfd,buffer,numBytes);	 
-						buffer += numBytes;
-						nBytesTotales += numBytes;
-						bytesRestantes -= numBytes;
+						bytesEscritos = write(subfd,buffer,numBytes);	 
+						buffer += bytesEscritos;
+						nBytesTotales += bytesEscritos;
 					}
 					numFile++;
 					close(subfd);
@@ -1294,15 +1292,10 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 			}
 	}
 	else if (numBytes == 0 && numLineas == 0){
-		bytesRestantes = tamFichero;
 		while ((bytesLeidos = read(fd,buffer,bsize)) != 0){ 
 			sprintf(newFile,"%s%d",nombreFichero,numFile);
 			subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
-			if (bytesRestantes < bsize)
-				write(subfd,buffer,bytesRestantes);
-			else
-				write(subfd,buffer,bsize);
-			bytesRestantes -= bsize;
+			write(subfd,buffer,bytesLeidos);
 			close(subfd);
 			fsync(subfd);
 			numFile++;
@@ -1325,14 +1318,7 @@ void run_psplit(struct execcmd * ecmd){
     char opt;
     int numLineas = 0;
     int numBytes = 0;
-    int nBytesTotales = 0;
-    int nLineasTotales = 0;
     int bsize = 1024;
-    int subfd = 0;
-    int bytesLeidos;
-    int lineasLeidas;
-    int bytesRestantes = 0;
-    char * buffer = NULL;
 
     while ((opt = getopt(ecmd->argc, ecmd->argv, "l:b:s:p:h")) != -1) { //Parametro con : quiere decir que va seguido de un valor
         switch (opt) {
@@ -1366,14 +1352,14 @@ void run_psplit(struct execcmd * ecmd){
     if (numLineas != 0 && numBytes!= 0){
 	printf("psplit: Opciones incompatibles\n");
     }
-    else if (bsize <= 1 || bsize >= pow(2,20)){
+    else if (bsize <= MIN_BSIZE || bsize >= MAX_BSIZE){
 	printf("psplit: Opcion -s no válida\n");
     }
     /*else if (bsize > tamFichero){ ¿Se debe tratar este caso? DUDA
 	printf("El tamaño del buffer es mayor que el tamaño del fichero\n");
     }*/ 
     else if (optind == ecmd->argc){  //No hay ficheros de entrada
-	auxPsplit(numLineas,numBytes,bsize,0,"stdin");
+	auxPsplit(numLineas,numBytes,bsize,STDIN_FILENO,"stdin");
     }
     else{
 	//Procesamiento de ficheros de entrada
