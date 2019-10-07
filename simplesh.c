@@ -1335,29 +1335,27 @@ void run_psplit(struct execcmd * ecmd){
 
 		break;
 	    case 'h':
-		printf("Uso: %s [-l NUM] [-b NUM] [-s NUM] [-p NUM] [-h] [FILE1] [FILE2]...\n", ecmd->argv[0]);
+		printf("Uso: %s [-l NLINES] [-b NBYTES] [-s BSIZE] [-p PROCS] [-h] [FILE1] [FILE2]...\r\n", ecmd->argv[0]);
 		printf("\tOpciones:\n");
-		printf("\t-l NLINES Número máximo de lineas por fichero.\n");
+		printf("\t-l NLINES Número máximo de líneas por fichero.\n");
 		printf("\t-b NBYTES Número máximo de bytes por fichero\n");
 		printf("\t-s BSIZE  Tamaño en bytes de los bloques leidos de [FILEn] o stdin\n");
 		printf("\t-p PROCS  Número máximo de procesos simultáneos\n");
 		printf("\t-h        Ayuda\n");
 		break;
             default:
-                fprintf(stderr, "Usage: %s [-l] [-l NUM] [-b NUM] [-s NUM] [-p NUM] [-h]\n", ecmd->argv[0]);
+         
                 break;
         }
     }
 
     if (numLineas != 0 && numBytes!= 0){
-	printf("psplit: Opciones incompatibles\n");
+	printf("psplit: Opciones incompatibles\r\n");
     }
     else if (bsize <= MIN_BSIZE || bsize >= MAX_BSIZE){
-	printf("psplit: Opcion -s no válida\n");
+	printf("psplit: Opcion -s no válida\r\n");
     }
-    /*else if (bsize > tamFichero){ ¿Se debe tratar este caso? DUDA
-	printf("El tamaño del buffer es mayor que el tamaño del fichero\n");
-    }*/ 
+    
     else if (optind == ecmd->argc){  //No hay ficheros de entrada
 	auxPsplit(numLineas,numBytes,bsize,STDIN_FILENO,"stdin");
     }
