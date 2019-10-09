@@ -1237,60 +1237,72 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 		exit(EXIT_FAILURE);
 	}
 	if (numBytes != 0){ //Caso en el que hay limite en el número de bytes
-			while ((bytesLeidos = read(fd,buffer,bsize)) != 0){		
+		while ((bytesLeidos = read(fd,buffer,bsize)) != 0){		
+			sprintf(newFile,"%s%d",nombreFichero,numFile);
+			while (nBytesTotales < bytesLeidos){
 				sprintf(newFile,"%s%d",nombreFichero,numFile);
-				while (nBytesTotales < bytesLeidos){
-					sprintf(newFile,"%s%d",nombreFichero,numFile);
-					subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
-					if (bytesLeidos - nBytesTotales < numBytes){
-						bytesRestantes = bytesLeidos - nBytesTotales;
-						bytesEscritos = write(subfd,buffer,bytesRestantes);
-						buffer += bytesRestantes;
-						nBytesTotales += bytesRestantes;
-					}else{
-						bytesEscritos = write(subfd,buffer,numBytes);	 
-						buffer += bytesEscritos;
-						nBytesTotales += bytesEscritos;
-					}
-					numFile++;
-					close(subfd);
-					fsync(subfd);
+				subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
+				if (bytesLeidos - nBytesTotales < numBytes){
+					bytesRestantes = bytesLeidos - nBytesTotales;
+					bytesEscritos = write(subfd,buffer,bytesRestantes);
+					buffer += bytesRestantes;
+					nBytesTotales += bytesRestantes;
+				}else{
+					bytesEscritos = write(subfd,buffer,numBytes);	 
+					buffer += bytesEscritos;
+					nBytesTotales += bytesEscritos;
 				}
-				buffer -= nBytesTotales;
-				nBytesTotales = 0;
+				numFile++;
+				close(subfd);
+				fsync(subfd);
 			}
-			close(fd);
-			fsync(fd);
+			buffer -= nBytesTotales;
+			nBytesTotales = 0;
+		}
+		close(fd);
+		fsync(fd);
 					
 	}
+
 	else if (numLineas != 0){ // Caso en el que hay limite en el numero de lineas
+		int n = 0;
 		sprintf(newFile,"%s%d",nombreFichero,numFile);
-		subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
-		while ((bytesLeidos = read(fd,buffer,bsize)) != 0) {
-			while (nBytesTotales < bsize) {
-					while (buffer[0]!='\n' && buffer[0]!='\0') {
-						write(subfd, buffer, 1);
-						buffer++;
-						nBytesTotales++;
-					}
-					if (buffer[0] == '\n') {
-						write(subfd, buffer, 1);
-						buffer++;
-						nBytesTotales++;
-						nLineasTotales++;
-						if (nLineasTotales == numLineas) {
-							numFile++;
-							sprintf(newFile,"%s%d",nombreFichero,numFile);
-							subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
-							nLineasTotales = 0;
-						}
+                subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
+			int posicionesAvanzadas = 0;
+                        while ((bytesLeidos = read(fd,buffer,bsize)) != 0){
+                                while ( nBytesTotales < bytesLeidos ) {
+                                        if ( buffer[posicionesAvanzadas] == '\n' ) {
+                                                n++;
+                                                if (n == numLineas) {
+                                                        write(subfd, buffer, posicionesAvanzadas+1);
+                                                        buffer+=posicionesAvanzadas+1;
+                                                        posicionesAvanzadas = 0;
+                                                        close(subfd);
+                                                        fsync(subfd);
+                                                        numFile++;
+                                                        sprintf(newFile,"%s%d",nombreFichero,numFile);
+                                                        subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
+                                                        n = 0;
+                                                }
+	   					else
+							posicionesAvanzadas++;					
 					} else
-						break;
-					}
-				buffer-=nBytesTotales;
-				nBytesTotales = 0;
-			}
+						posicionesAvanzadas++;
+                                        nBytesTotales++;
+				
+                        }
+                                write(subfd, buffer, posicionesAvanzadas);
+                                buffer = buffer - nBytesTotales + posicionesAvanzadas;
+				posicionesAvanzadas = 0;
+                                nBytesTotales = 0;
+        	}
+
+			close(subfd);
+			fsync(subfd);			
+			close(fd);
+			fsync(fd);
 	}
+	
 	else if (numBytes == 0 && numLineas == 0){
 		while ((bytesLeidos = read(fd,buffer,bsize)) != 0){ 
 			sprintf(newFile,"%s%d",nombreFichero,numFile);
