@@ -1347,14 +1347,14 @@ void run_psplit(struct execcmd * ecmd){
 
 		break;
 	    case 'h':
-		printf("Uso: %s [-l NLINES] [-b NBYTES] [-s BSIZE] [-p PROCS] [-h] [FILE1] [FILE2]...\r\n", ecmd->argv[0]);
+		printf("Uso: %s [-l NLINES] [-b NBYTES] [-s BSIZE] [-p PROCS] [FILE1] [FILE2]...\r\n", ecmd->argv[0]);
 		printf("\tOpciones:\n");
 		printf("\t-l NLINES Número máximo de líneas por fichero.\n");
 		printf("\t-b NBYTES Número máximo de bytes por fichero\n");
 		printf("\t-s BSIZE  Tamaño en bytes de los bloques leidos de [FILEn] o stdin\n");
 		printf("\t-p PROCS  Número máximo de procesos simultáneos\n");
 		printf("\t-h        Ayuda\n");
-		break;
+		exit(EXIT_SUCCESS);
             default:
          
                 break;
