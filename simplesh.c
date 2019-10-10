@@ -1315,11 +1315,8 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 		close(fd);
 		fsync(fd);
 	}
-				
-	free(buffer);
+	free(buffer); 
 	//printf("%s\n", ecmd->argv[i]);
-	
-	
 }
 
 //Funcion del comando interno psplit 
@@ -1331,6 +1328,7 @@ void run_psplit(struct execcmd * ecmd){
     int numLineas = 0;
     int numBytes = 0;
     int bsize = 1024;
+    int procs = 1;
 
     while ((opt = getopt(ecmd->argc, ecmd->argv, "l:b:s:p:h")) != -1) { //Parametro con : quiere decir que va seguido de un valor
         switch (opt) {
@@ -1344,7 +1342,7 @@ void run_psplit(struct execcmd * ecmd){
 		bsize = atoi(optarg);
 		break;
 	    case 'p':
-
+		procs = atoi(optarg);
 		break;
 	    case 'h':
 		printf("Uso: %s [-l NLINES] [-b NBYTES] [-s BSIZE] [-p PROCS] [FILE1] [FILE2]...\r\n", ecmd->argv[0]);
@@ -1356,7 +1354,7 @@ void run_psplit(struct execcmd * ecmd){
 		printf("\t-h        Ayuda\n");
 		exit(EXIT_SUCCESS);
             default:
-         
+         	
                 break;
         }
     }
@@ -1371,16 +1369,54 @@ void run_psplit(struct execcmd * ecmd){
     else if (optind == ecmd->argc){  //No hay ficheros de entrada
 	auxPsplit(numLineas,numBytes,bsize,STDIN_FILENO,"stdin");
     }
-    else{
-	//Procesamiento de ficheros de entrada
-	for(int i = optind; i < ecmd->argc; i++){
-		int fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU);
-		auxPsplit(numLineas,numBytes,bsize,fd,ecmd->argv[i]);
-    	}
-    }
-    
-    	 
 
+	else { //Procesamiento de ficheros de entrada
+		int i = optind;
+		int * pids = malloc(procs * sizeof(int));
+		if (pids == NULL){
+			printf("Fallo al reservar memoria con malloc\n");
+			exit(EXIT_FAILURE);
+		}
+		int nprocs = 0;
+		int index = 0;
+		int frk;
+		int indexMasAntiguo = 0;
+		while ( i <  ecmd->argc ) {
+			frk = fork_or_panic("fork psplit");
+			if ( frk == 0 ) {
+				pids[index] = frk;
+				int fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU);
+				auxPsplit(numLineas,numBytes,bsize,fd,ecmd->argv[i]);
+				if (index >= procs-1)
+					index = 0;
+				else					
+					index++;
+				nprocs++;
+				i++;
+					
+			}
+			if ( nprocs >= procs ) {
+				TRY(wait(&pids[indexMasAntiguo]));
+				if (indexMasAntiguo >= procs-1)
+					indexMasAntiguo = 0;
+				else
+					indexMasAntiguo++;
+				nprocs--;		
+			}
+
+		}
+    	}    
+	/*
+	else{
+	//Procesamiento de ficheros de entrada
+		for(int i = optind; i < ecmd->argc; i++){
+			int fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU);
+			auxPsplit(numLineas,numBytes,bsize,fd,ecmd->argv[i]);
+	    	}
+    	}
+    
+	
+	*/	 
 }
 
 
