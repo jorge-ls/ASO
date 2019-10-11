@@ -1374,8 +1374,10 @@ void run_psplit(struct execcmd * ecmd){
     else{
 	//Procesamiento de ficheros de entrada
 	for(int i = optind; i < ecmd->argc; i++){
-		int fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU);
-		auxPsplit(numLineas,numBytes,bsize,fd,ecmd->argv[i]);
+		//if (fork_or_panic("fork psplit") == 0){
+			int fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU);
+			auxPsplit(numLineas,numBytes,bsize,fd,ecmd->argv[i]);
+		//}
     	}
     }
     
