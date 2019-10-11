@@ -1325,6 +1325,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 void run_psplit(struct execcmd * ecmd){
     optind = 1;
     char opt;
+    int frk;
     int numLineas = 0;
     int numBytes = 0;
     int bsize = 1024;
@@ -1367,7 +1368,12 @@ void run_psplit(struct execcmd * ecmd){
     }
     
     else if (optind == ecmd->argc){  //No hay ficheros de entrada
-	auxPsplit(numLineas,numBytes,bsize,STDIN_FILENO,"stdin");
+	frk = fork_or_panic("fork psplit");
+	if (frk == 0){
+		auxPsplit(numLineas,numBytes,bsize,STDIN_FILENO,"stdin");
+		exit(EXIT_SUCCESS);
+	}
+	TRY(wait(&frk));
     }
 
 	else { //Procesamiento de ficheros de entrada
@@ -1378,8 +1384,10 @@ void run_psplit(struct execcmd * ecmd){
 			exit(EXIT_FAILURE);
 		}
 		int nprocs = 0;
-		int frk;
-		//int indexMasAntiguo = 0;
+		
+		if (ecmd->argc - optind < procs){ //Caso en el que el PROCS es mayor que el número de ficheros
+			procs = ecmd->argc - optind;
+		}
 		for(int i = optind; i < ecmd->argc; i++){
 			frk = fork_or_panic("fork psplit");
 			if ( frk == 0 ) {
