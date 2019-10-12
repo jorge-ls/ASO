@@ -1267,40 +1267,46 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 	else if (numLineas != 0){ // Caso en el que hay limite en el numero de lineas
 		int n = 0;
 		sprintf(newFile,"%s%d",nombreFichero,numFile);
-                subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
-			int posicionesAvanzadas = 0;
-                        while ((bytesLeidos = read(fd,buffer,bsize)) != 0){
-                                while ( nBytesTotales < bytesLeidos ) {
-                                        if ( buffer[posicionesAvanzadas] == '\n' ) {
-                                                n++;
-                                                if (n == numLineas) {
-                                                        write(subfd, buffer, posicionesAvanzadas+1);
-                                                        buffer+=posicionesAvanzadas+1;
-                                                        posicionesAvanzadas = 0;
-                                                        close(subfd);
-                                                        fsync(subfd);
-                                                        numFile++;
-                                                        sprintf(newFile,"%s%d",nombreFichero,numFile);
-                                                        subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
-                                                        n = 0;
-                                                }
-	   					else
-							posicionesAvanzadas++;					
-					} else
-						posicionesAvanzadas++;
-                                        nBytesTotales++;
+                int posicionesAvanzadas = 0;
+                while ((bytesLeidos = read(fd,buffer,bsize)) != 0){
+                	while ( nBytesTotales < bytesLeidos ) {
+                        	if ( buffer[posicionesAvanzadas] == '\n' ) {
+                                   	n++;
+                                        if (n == numLineas) {
+						subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
+                                        	write(subfd, buffer, posicionesAvanzadas+1);
+                                                buffer+=posicionesAvanzadas+1;
+                                                posicionesAvanzadas = 0;
+                                                close(subfd);
+                                                fsync(subfd);
+                                                numFile++;
+                                                sprintf(newFile,"%s%d",nombreFichero,numFile);
+                                                //subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
+                                                n = 0;
+                                         }
+	   				 else
+						posicionesAvanzadas++;					
+				} else
+					posicionesAvanzadas++;
+                                nBytesTotales++;
 				
                         }
-                                write(subfd, buffer, posicionesAvanzadas);
-                                buffer = buffer - nBytesTotales + posicionesAvanzadas;
-				posicionesAvanzadas = 0;
-                                nBytesTotales = 0;
+			if (posicionesAvanzadas > 0){
+				subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU);
+				write(subfd, buffer, posicionesAvanzadas);
+				close(subfd);
+				fsync(subfd);
+				
+                        	
+			}
+			buffer = buffer - nBytesTotales + posicionesAvanzadas;
+			posicionesAvanzadas = 0;
+			nBytesTotales = 0;
+                        
         	}
 
-			close(subfd);
-			fsync(subfd);			
-			close(fd);
-			fsync(fd);
+		close(fd);
+		fsync(fd);
 	}
 	
 	else if (numBytes == 0 && numLineas == 0){
@@ -1409,9 +1415,10 @@ void run_psplit(struct execcmd * ecmd){
 			
 
 		}
+		free(pids);
     	}    
-	/*
-	else{
+	
+	/*else{
 	//Procesamiento de ficheros de entrada
 
 	for(int i = optind; i < ecmd->argc; i++){
