@@ -1437,18 +1437,18 @@ void run_psplit(struct execcmd * ecmd){
     else if (opcionAyuda){}
 	
     else if (optind == ecmd->argc){  //No hay ficheros de entrada
-	//frk = fork_or_panic("fork psplit");
-	//if (frk == 0){
+	frk = fork_or_panic("fork psplit");
+	if (frk == 0){
 		auxPsplit(numLineas,numBytes,bsize,STDIN_FILENO,"stdin");
-		//exit(EXIT_SUCCESS);
-	//}
-	//TRY(waitpid(frk,&status,WNOHANG));
+		exit(EXIT_SUCCESS);
+	}
+	TRY(waitpid(frk,&status,WNOHANG));
     }
 
 	else { //Procesamiento de ficheros de entrada
-		//int i = optind;
-		//pid_t * pids = malloc(procs * sizeof(pid_t));
-		/*if (pids == NULL){
+		int i = optind;
+		pid_t * pids = malloc(procs * sizeof(pid_t));
+		if (pids == NULL){
 			printf("Fallo al reservar memoria con malloc\n");
 			exit(EXIT_FAILURE);
 		}
@@ -1456,18 +1456,18 @@ void run_psplit(struct execcmd * ecmd){
 		
 		if (ecmd->argc - optind < procs){ //Caso en el que el PROCS es mayor que el número de ficheros
 			procs = ecmd->argc - optind;
-		}*/
+		}
 		for(int i = optind; i < ecmd->argc; i++){
-			//frk = fork_or_panic("fork psplit");
-			//if ( frk == 0 ) {
+			frk = fork_or_panic("fork psplit");
+			if ( frk == 0 ) {
 				if ((fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU)) < 0){
 					perror("open");
                     			exit(EXIT_FAILURE);
 				}
 				auxPsplit(numLineas,numBytes,bsize,fd,ecmd->argv[i]);
-				//exit(EXIT_SUCCESS);
+				exit(EXIT_SUCCESS);
 			}
-			/*pids[nprocs] = frk;
+			pids[nprocs] = frk;
 			nprocs++;
 			if (ecmd->argc - i < procs){ //Caso en el que el número de ficheros es menor a PROCS
 				procs = ecmd->argc - i;
@@ -1481,7 +1481,7 @@ void run_psplit(struct execcmd * ecmd){
 			
 
 		}
-		free(pids);*/
+		free(pids);
     	}    
 	
 	/*else{
