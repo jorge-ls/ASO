@@ -1218,6 +1218,7 @@ void run_cd(struct execcmd * ecmd){
 
 }
 
+
 void closeFile(int fd){
 	if (close(fd) < 0){
 		perror("close");
@@ -1231,6 +1232,7 @@ void fsyncFile(int fd){
                 exit(EXIT_FAILURE);
 	}
 }
+
 
 void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero){
 	int nBytesTotales = 0;
@@ -1281,17 +1283,17 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 					nBytesTotales += bytesEscritos;
 				}
 				numFile++;
+
 				fsyncFile(subfd);
 				closeFile(subfd);
-				
 				
 			}
 			buffer -= nBytesTotales;
 			nBytesTotales = 0;
 		}
+
 		fsyncFile(fd);
 		closeFile(fd);
-		
 					
 	}
 
@@ -1372,7 +1374,6 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 		}
 		fsyncFile(fd);
 		closeFile(fd);
-		
 	}
 	free(buffer); 
 	//printf("%s\n", ecmd->argv[i]);
@@ -1416,8 +1417,6 @@ void run_psplit(struct execcmd * ecmd){
 		printf("\t-s BSIZE  Tamaño en bytes de los bloques leidos de [FILEn] o stdin\n");
 		printf("\t-p PROCS  Número máximo de procesos simultáneos\n");
 		printf("\t-h Ayuda\n\n");
-		
-		
 		break;
             default:
          	
@@ -1435,7 +1434,7 @@ void run_psplit(struct execcmd * ecmd){
 	printf("psplit: Opción -p no válida\n");
     }
     else if (opcionAyuda){}
-	
+
     else if (optind == ecmd->argc){  //No hay ficheros de entrada
 	frk = fork_or_panic("fork psplit");
 	if (frk == 0){
