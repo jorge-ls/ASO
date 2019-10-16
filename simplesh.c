@@ -1242,6 +1242,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
     	int bytesRestantes = 0;
 	int nLineasTotales = 0;
 	int lineasLeidas;
+	int bytesRestantesFile = numBytes;
 	int incompleto = 0;
 	int bytesEscritosTotales = 0;
     	char * buffer = NULL;
@@ -1275,6 +1276,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 					buffer += bytesEscritos;
 					//nBytesTotales += bytesEscritos;
 					bytesRestantes -= bytesEscritos;
+					bytesRestantesFile -= bytesEscritos;
 					numFile++;
 					incompleto = 0;
 					fsyncFile(subfd);
@@ -1283,7 +1285,6 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 				}
 				
 				else {
-					
 					if (bytesRestantes < numBytes){
 						//bytesRestantes = numBytes - bytesEscritosTotales;
 						bytesEscritos = write(subfd,buffer,bytesRestantes);
@@ -1294,6 +1295,10 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 						buffer += bytesEscritos;
 						//nBytesTotales += bytesEscritos;
 						bytesRestantes -= bytesEscritos;
+						bytesRestantesFile -= bytesEscritos;
+						if (bytesRestantesFile == 0){
+							numFile++;
+						}
 						incompleto = 1;
 						fsyncFile(subfd);
 						closeFile(subfd);
