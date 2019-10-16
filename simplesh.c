@@ -1242,13 +1242,15 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
     	int bytesRestantes = 0;
 	int nLineasTotales = 0;
 	int lineasLeidas;
+	int incompleto = 0;
+	int bytesEscritosTotales = 0;
     	char * buffer = NULL;
 	int numFile = 0;
 	char newFile[50];
 
 	buffer = malloc(bsize * sizeof(char));
 	if (buffer == NULL){
-		printf("Fallo al reservar memoria con malloc\n");
+		perror("auxPsplit: malloc");
 		exit(EXIT_FAILURE);
 	}
 	if (numBytes != 0){ //Caso en el que hay limite en el número de bytes
@@ -1256,40 +1258,72 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 			if (bytesLeidos < 0){
 				perror("read");
                     		exit(EXIT_FAILURE);
-			}		
-			sprintf(newFile,"%s%d",nombreFichero,numFile);
-			while (nBytesTotales < bytesLeidos){
+			}
+			bytesRestantes = bytesLeidos;	
+			//sprintf(newFile,"%s%d",nombreFichero,numFile);
+			while (bytesRestantes > 0){
 				sprintf(newFile,"%s%d",nombreFichero,numFile);
 				if ((subfd = open(newFile,O_CREAT | O_RDWR | O_APPEND,S_IRWXU)) < 0){
-					perror("open");
-                    			exit(EXIT_FAILURE);
+						perror("open");
+                    				exit(EXIT_FAILURE);
 				}
-				if (bytesLeidos - nBytesTotales < numBytes){
-					bytesRestantes = bytesLeidos - nBytesTotales;
-					bytesEscritos = write(subfd,buffer,bytesRestantes);
-					if (bytesEscritos < 0){
+				if (incompleto){
+					if ((bytesEscritos = write(subfd,buffer,numBytes - bytesEscritos)) < 0){
 						perror("write");
                     				exit(EXIT_FAILURE);
 					}
-					buffer += bytesRestantes;
-					nBytesTotales += bytesRestantes;
-				}else{
-					bytesEscritos = write(subfd,buffer,numBytes);	
-					if (bytesEscritos < 0){
-						perror("write");
-                    				exit(EXIT_FAILURE);
-					} 
 					buffer += bytesEscritos;
-					nBytesTotales += bytesEscritos;
+					//nBytesTotales += bytesEscritos;
+					bytesRestantes -= bytesEscritos;
+					numFile++;
+					incompleto = 0;
+					fsyncFile(subfd);
+					closeFile(subfd);
+					
 				}
-				numFile++;
-
-				fsyncFile(subfd);
-				closeFile(subfd);
+				
+				else {
+					
+					if (bytesRestantes < numBytes){
+						//bytesRestantes = numBytes - bytesEscritosTotales;
+						bytesEscritos = write(subfd,buffer,bytesRestantes);
+						if (bytesEscritos < 0){
+							perror("write");
+                    					exit(EXIT_FAILURE);
+						}
+						buffer += bytesEscritos;
+						//nBytesTotales += bytesEscritos;
+						bytesRestantes -= bytesEscritos;
+						incompleto = 1;
+						fsyncFile(subfd);
+						closeFile(subfd);
+					}
+					else{ 		
+						//bytesRestantes = numBytes - bytesEscritos;
+						bytesEscritos = write(subfd,buffer,numBytes);
+						if (bytesEscritos < 0){
+							perror("write");
+                    					exit(EXIT_FAILURE);
+						}
+						buffer += bytesEscritos;
+						//nBytesTotales += bytesEscritos;
+						bytesRestantes -= bytesEscritos;
+						numFile++;
+						fsyncFile(subfd);
+						closeFile(subfd);
+					}
+					
+				}
+				
+				
+				
+				//bytesEscritosTotales += bytesEscritos;
+				
+				//bytesEscritosTotales = 0;
 				
 			}
-			buffer -= nBytesTotales;
-			nBytesTotales = 0;
+			buffer -= bytesLeidos;
+			//nBytesTotales = 0;
 		}
 
 		fsyncFile(fd);
@@ -1436,37 +1470,40 @@ void run_psplit(struct execcmd * ecmd){
     else if (opcionAyuda){}
 
     else if (optind == ecmd->argc){  //No hay ficheros de entrada
-	frk = fork_or_panic("fork psplit");
-	if (frk == 0){
+	//frk = fork_or_panic("fork psplit");
+	//if (frk == 0){
 		auxPsplit(numLineas,numBytes,bsize,STDIN_FILENO,"stdin");
-		exit(EXIT_SUCCESS);
-	}
-	TRY(waitpid(frk,&status,WNOHANG));
+		//exit(EXIT_SUCCESS);
+	//}
+	//TRY(waitpid(frk,&status,WNOHANG));
     }
 
 	else { //Procesamiento de ficheros de entrada
-		int i = optind;
-		pid_t * pids = malloc(procs * sizeof(pid_t));
-		if (pids == NULL){
-			printf("Fallo al reservar memoria con malloc\n");
-			exit(EXIT_FAILURE);
+		//int i = optind;
+		//pid_t * pids = malloc(procs * sizeof(pid_t));
+		/*if (pids == NULL){
+			 perror("run_psplit: malloc");
+        		 exit(EXIT_FAILURE);
 		}
 		int nprocs = 0;
 		
 		if (ecmd->argc - optind < procs){ //Caso en el que el PROCS es mayor que el número de ficheros
 			procs = ecmd->argc - optind;
-		}
+		}*/
 		for(int i = optind; i < ecmd->argc; i++){
-			frk = fork_or_panic("fork psplit");
-			if ( frk == 0 ) {
+			/*if ((frk = fork_or_panic("fork psplit")) < 0){
+				perror("run_psplit: fork");
+				exit(EXIT_FAILURE);
+			}*/
+			//if ( frk == 0 ) {
 				if ((fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU)) < 0){
 					perror("open");
                     			exit(EXIT_FAILURE);
 				}
 				auxPsplit(numLineas,numBytes,bsize,fd,ecmd->argv[i]);
-				exit(EXIT_SUCCESS);
+				//exit(EXIT_SUCCESS);
 			}
-			pids[nprocs] = frk;
+			/*pids[nprocs] = frk;
 			nprocs++;
 			if (ecmd->argc - i < procs){ //Caso en el que el número de ficheros es menor a PROCS
 				procs = ecmd->argc - i;
@@ -1480,7 +1517,7 @@ void run_psplit(struct execcmd * ecmd){
 			
 
 		}
-		free(pids);
+		free(pids);*/
     	}    
 	
 	/*else{
