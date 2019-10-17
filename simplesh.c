@@ -34,6 +34,7 @@
 #include <pwd.h>
 #include <limits.h>
 #include <libgen.h>
+#include <signal.h>
 #include <math.h>
 
 
