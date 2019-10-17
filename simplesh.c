@@ -881,7 +881,7 @@ void run_cmd(struct cmd* cmd)
                 exit(EXIT_FAILURE);
             }
 
-            // EjecuciÃÂÃÂ³n del hijo de la izquierda
+            // Ejecución del hijo de la izquierda
             if (fork_or_panic("fork PIPE left") == 0)
             {
                 TRY( close(STDOUT_FILENO) );
@@ -900,7 +900,7 @@ void run_cmd(struct cmd* cmd)
                 exit(EXIT_SUCCESS);
             }
 
-            // EjecuciÃÂÃÂ³n del hijo de la derecha
+            // Ejecución del hijo de la derecha
             if (fork_or_panic("fork PIPE right") == 0)
             {
                 TRY( close(STDIN_FILENO) );
@@ -1252,7 +1252,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 		perror("auxPsplit: malloc");
 		exit(EXIT_FAILURE);
 	}
-	if (numBytes != 0){ //Caso en el que hay limite en el nÃÂºmero de bytes
+	if (numBytes != 0){ //Caso en el que hay limite en el número de bytes
 		int nBytesFA = 0;
 		sprintf(newFile,"%s%d",nombreFichero,numFile);
 		if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC,S_IRWXU)) < 0){
@@ -1261,7 +1261,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 		}
 		while ((bytesLeidos = read(fd,buffer,bsize)) != 0){
 			if (bytesLeidos < 0){
-				perror("read");
+				perror("auxPsplit: read");
 		         	exit(EXIT_FAILURE);
 			}		
 			int bytesRestantes = bytesLeidos;
@@ -1269,7 +1269,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 				if ( nBytesFA + bytesRestantes >= numBytes ) {
 					bytesEscritos = write(subfd,buffer, numBytes - nBytesFA);
 					if (bytesEscritos < 0){
-						perror("write");
+						perror("auxPsplit: write");
                     				exit(EXIT_FAILURE);
 					}
 					numFile++;
@@ -1277,7 +1277,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 					closeFile(subfd);
 					sprintf(newFile,"%s%d",nombreFichero,numFile);
 					if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC,S_IRWXU)) < 0){
-						perror("open");
+						perror("auxPsplit: open");
 					  	exit(EXIT_FAILURE);
 					}
 					nBytesTotales += bytesEscritos;
@@ -1287,7 +1287,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 				} else {
 					bytesEscritos = write(subfd,buffer, bytesRestantes);
 					if (bytesEscritos < 0){
-						perror("write");
+						perror("auxPsplit: write");
                     				exit(EXIT_FAILURE);
 					}
 					nBytesTotales += bytesEscritos;
@@ -1311,13 +1311,13 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 		int n = 0;
 		sprintf(newFile,"%s%d",nombreFichero,numFile);
 		if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC, S_IRWXU)) < 0){
-			perror("open");
+			perror("auxPsplit: open");
                     	exit(EXIT_FAILURE);
 		}
                 int posicionesAvanzadas = 0;
                 while ((bytesLeidos = read(fd,buffer,bsize)) != 0){
 			if (bytesLeidos < 0){
-				perror("read");
+				perror("auxPsplit: read");
                     		exit(EXIT_FAILURE);
 			}
                 	while ( nBytesTotales < bytesLeidos ) {
@@ -1325,7 +1325,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
                                    	n++;
                                         if (n == numLineas) {
                                         	if (write(subfd, buffer, posicionesAvanzadas+1) < 0){
-							perror("write");
+							perror("auxPsplit: write");
                     					exit(EXIT_FAILURE);
 						}
                                                 buffer+=posicionesAvanzadas+1;
@@ -1335,7 +1335,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
                                                 numFile++;
                                                 sprintf(newFile,"%s%d",nombreFichero,numFile);
 						if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC,S_IRWXU)) < 0){
-							perror("open");
+							perror("auxPsplit: open");
                     					exit(EXIT_FAILURE);
 						}
                                                 n = 0;
@@ -1349,7 +1349,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
                         }
 			if (posicionesAvanzadas > 0){
 				if (write(subfd, buffer, posicionesAvanzadas) < 0){
-					perror("write");
+					perror("auxPsplit: write");
                     			exit(EXIT_FAILURE);
 				}
 			}
@@ -1366,12 +1366,12 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 	else if (numBytes == 0 && numLineas == 0){
 		sprintf(newFile,"%s%d",nombreFichero,numFile);
 		if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC, S_IRWXU)) < 0){
-			perror("open");
+			perror("auxPsplit: open");
                    	exit(EXIT_FAILURE);
 		}
 		while ((bytesLeidos = read(fd,buffer,bsize)) != 0){ 
 			if (write(subfd,buffer,bytesLeidos) < 0){
-				perror("write");
+				perror("auxPsplit: write");
                     		exit(EXIT_FAILURE);
 			}
 			fsyncFile(subfd);
@@ -1379,7 +1379,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 			numFile++;
 			sprintf(newFile,"%s%d",nombreFichero,numFile);
 			if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC, S_IRWXU)) < 0){
-				perror("open");
+				perror("auxPsplit: open");
                     		exit(EXIT_FAILURE);
 			}
 		}
@@ -1422,11 +1422,11 @@ void run_psplit(struct execcmd * ecmd){
 		opcionAyuda = 1;
 		printf("Uso: %s [-l NLINES] [-b NBYTES] [-s BSIZE] [-p PROCS] [FILE1] [FILE2]...\n", ecmd->argv[0]);
 		printf("\tOpciones:\n");
-		printf("\t-l NLINES NÃºmero mÃ¡ximo de lÃ­neas por fichero.\n");
-		printf("\t-b NBYTES NÃºmero mÃ¡ximo de bytes por fichero\n");
-		printf("\t-s BSIZE  TamaÃ±o en bytes de los bloques leidos de [FILEn] o stdin\n");
-		printf("\t-p PROCS  NÃºmero mÃ¡ximo de procesos simultaneos\n");
-		printf("\t-h 	Ayuda\n\n");
+		printf("\t-l NLINES Número máximo de líneas por fichero.\n");
+		printf("\t-b NBYTES Número máximo de bytes por fichero\n");
+		printf("\t-s BSIZE  Tamaño en bytes de los bloques leidos de [FILEn] o stdin\n");
+		printf("\t-p PROCS  Número máximo de procesos simultaneos\n");
+		printf("\t-h	Ayuda\n\n");
 		break;
             default:
          	
@@ -1438,10 +1438,10 @@ void run_psplit(struct execcmd * ecmd){
 	printf("psplit: Opciones incompatibles\n");
     }
     else if (bsize < MIN_BSIZE || bsize > MAX_BSIZE){
-	printf("psplit: OpciÃ³n -s no vÃ¡lida\n");
+	printf("psplit: Opción -s no válida\n");
     }
-    else if (procs==0){
-	printf("psplit: OpciÃ³n -p no vÃ¡lida\n");
+    else if (procs == 0){
+	printf("psplit: Opción -p no válida\n");
     }
     else if (opcionAyuda){}
 
@@ -1451,7 +1451,10 @@ void run_psplit(struct execcmd * ecmd){
 		auxPsplit(numLineas,numBytes,bsize,STDIN_FILENO,"stdin");
 		exit(EXIT_SUCCESS);
 	}
-	TRY(waitpid(frk,&status,0));
+	if (waitpid(frk,&status,0) < 0){
+		perror("run_psplit: waitpid");
+		exit(EXIT_FAILURE);
+	}
     }
 
 	else { //Procesamiento de ficheros de entrada
@@ -1462,10 +1465,6 @@ void run_psplit(struct execcmd * ecmd){
 			exit(EXIT_FAILURE);
 		}
 		int nprocs = 0;
-		
-		/*if (ecmd->argc - optind < procs){ //Caso en el que el PROCS es mayor que el nÃºmero de ficheros
-			procs = ecmd->argc - optind;
-		}*/
 		for(int i = optind; i < ecmd->argc; i++){
 			frk = fork_or_panic("fork psplit");
 			if ( frk == 0 ) {
@@ -1478,12 +1477,12 @@ void run_psplit(struct execcmd * ecmd){
 			}
 			pids[nprocs] = frk;
 			nprocs++;
-			/*if (ecmd->argc - i < procs){ //Caso en el que el nÃºmero de ficheros es menor a PROCS
-				procs = ecmd->argc - i;
-			}*/
 			if ( nprocs == procs || ecmd->argc - i == 1 ) {
 				for (int i=0;i<nprocs;i++){
-					TRY(waitpid(pids[i],&status,0));
+					if(waitpid(pids[i],&status,0) < 0){
+						perror("run_psplit: waitpid");
+						exit(EXIT_FAILURE);
+					}
 				}
 				nprocs = 0;
 			}		
@@ -1560,7 +1559,7 @@ void parse_args(int argc, char** argv)
 {
     int option;
 
-    // Bucle de procesamiento de parÃÂÃÂ¡metros
+    // Bucle de procesamiento de parámetros
     while((option = getopt(argc, argv, "d:h")) != -1) {
         switch(option) {
             case 'd':
