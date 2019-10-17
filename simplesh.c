@@ -1254,7 +1254,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 	if (numBytes != 0){ //Caso en el que hay limite en el nÃÂºmero de bytes
 		int nBytesFA = 0;
 		sprintf(newFile,"%s%d",nombreFichero,numFile);
-		if ((subfd = open(newFile,O_CREAT | O_RDWR ,S_IRWXU)) < 0){
+		if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC,S_IRWXU)) < 0){
 			perror("open");
 			exit(EXIT_FAILURE);
 		}
@@ -1275,7 +1275,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 					fsyncFile(subfd);
 					closeFile(subfd);
 					sprintf(newFile,"%s%d",nombreFichero,numFile);
-					if ((subfd = open(newFile,O_CREAT | O_RDWR ,S_IRWXU)) < 0){
+					if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC,S_IRWXU)) < 0){
 						perror("open");
 					  	exit(EXIT_FAILURE);
 					}
@@ -1309,7 +1309,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 	else if (numLineas != 0){ // Caso en el que hay limite en el numero de lineas
 		int n = 0;
 		sprintf(newFile,"%s%d",nombreFichero,numFile);
-		if ((subfd = open(newFile,O_CREAT | O_RDWR ,S_IRWXU)) < 0){
+		if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC, S_IRWXU)) < 0){
 			perror("open");
                     	exit(EXIT_FAILURE);
 		}
@@ -1333,7 +1333,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
                                                 closeFile(subfd);
                                                 numFile++;
                                                 sprintf(newFile,"%s%d",nombreFichero,numFile);
-						if ((subfd = open(newFile,O_CREAT | O_RDWR ,S_IRWXU)) < 0){
+						if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC,S_IRWXU)) < 0){
 							perror("open");
                     					exit(EXIT_FAILURE);
 						}
@@ -1364,7 +1364,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 	
 	else if (numBytes == 0 && numLineas == 0){
 		sprintf(newFile,"%s%d",nombreFichero,numFile);
-		if ((subfd = open(newFile,O_CREAT | O_RDWR, S_IRWXU)) < 0){
+		if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC, S_IRWXU)) < 0){
 			perror("open");
                    	exit(EXIT_FAILURE);
 		}
@@ -1377,7 +1377,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 			closeFile(subfd);
 			numFile++;
 			sprintf(newFile,"%s%d",nombreFichero,numFile);
-			if ((subfd = open(newFile,O_CREAT | O_RDWR, S_IRWXU)) < 0){
+			if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC, S_IRWXU)) < 0){
 				perror("open");
                     		exit(EXIT_FAILURE);
 			}
