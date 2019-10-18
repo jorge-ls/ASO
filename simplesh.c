@@ -1590,9 +1590,16 @@ int main(int argc, char** argv)
     struct cmd* cmd;
     struct sigaction sa;  //Estructura sigaction para la señal SIGCHILD
     struct sigaction sa1; //Estructura sigaction para la señal SIGQUIT	
+    //Inicializacion de sa1
     memset(&sa1, 0, sizeof(sa1)); 
     sa1.sa_handler = SIG_IGN;
     //sigemptyset(&sa.sa_mask);
+    
+    //Inicializacion de sa
+    memset(&sa, 0, sizeof(sa)); 
+    sa.sa_handler = handle_sigchld;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
 
     sigset_t blocked_signals;
     sigemptyset(&blocked_signals);
