@@ -107,6 +107,15 @@ static const char SYMBOLS[] = "<|>&;()";
 char pathAnterior[PATH_MAX];
 int std_out;
 
+//Manejador de señales para la señal SIGCHILD
+
+void handle_sigchld(int sig) {
+  int status;
+  int saved_errno = errno;
+  while (wait(&status) > 0) {}
+  errno = saved_errno;
+}
+
 /******************************************************************************
  * Funciones auxiliares
  ******************************************************************************/
@@ -1162,7 +1171,7 @@ void run_exit(struct execcmd * ecmd){
 void run_cwd(){
 	char path[PATH_MAX];
 	if (!getcwd(path,PATH_MAX)){
-		perror("run_cwd");
+		perror("run_cwd: getcwd");
 		exit(EXIT_FAILURE);
 	}
 	printf("cwd: %s\n",path);
@@ -1206,11 +1215,11 @@ void run_cd(struct execcmd * ecmd){
 		char path[PATH_MAX];
 		getcwd(path,PATH_MAX);
 		if (ecmd->argv[2] != NULL){
-			printf("run_cd: Demasiados argumentos\r\n");
+			printf("run_cd: Demasiados argumentos\n");
 		}
 		else if (chdir(ecmd->argv[1]) != 0){
 			//perror("run_cd");
-			printf("run_cd: No existe el directorio '%s'\r\n",ecmd->argv[1]);
+			printf("run_cd: No existe el directorio '%s'\n",ecmd->argv[1]);
 			//exit(EXIT_FAILURE);
 		}else {
 			setenv("OLDPWD", path, 1);
@@ -1579,7 +1588,26 @@ int main(int argc, char** argv)
 {
     char* buf;
     struct cmd* cmd;
+    struct sigaction sa;  //Estructura sigaction para la señal SIGCHILD
+    struct sigaction sa1; //Estructura sigaction para la señal SIGQUIT	
+    memset(&sa1, 0, sizeof(sa1)); 
+    sa1.sa_handler = SIG_IGN;
+    //sigemptyset(&sa.sa_mask);
 
+    sigset_t blocked_signals;
+    sigemptyset(&blocked_signals);
+    sigaddset(&blocked_signals, SIGINT);
+    //Se añade la señal SIGINT a la mascara de bloqueo de señales
+    if (sigprocmask(SIG_BLOCK, &blocked_signals, NULL) == -1) {
+        perror("sigprocmask");
+        exit(EXIT_FAILURE);
+    }
+    //Se establece la accion a realizar al recibir una señal SIGQUIT
+    // que en este caso es ignorada
+    if (sigaction(SIGQUIT,&sa1, NULL) == -1) {
+        perror("sigaction");
+        exit(EXIT_FAILURE);
+    }
     parse_args(argc, argv);
     unsetenv("OLDPWD");
 
