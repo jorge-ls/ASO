@@ -107,14 +107,6 @@ static const char SYMBOLS[] = "<|>&;()";
 char pathAnterior[PATH_MAX];
 int std_out;
 
-//Manejador de señales para la señal SIGCHILD
-
-void handle_sigchld(int sig) {
-  int status;
-  int saved_errno = errno;
-  while (wait(&status) > 0) {}
-  errno = saved_errno;
-}
 
 /******************************************************************************
  * Funciones auxiliares
@@ -808,6 +800,8 @@ void run_cmd(struct cmd* cmd)
     struct subscmd* scmd;
     int p[2];
     int fd;
+    int status;
+    pid_t pidChild;
 
     DPRINTF(DBG_TRACE, "STR\n");
 
@@ -820,10 +814,14 @@ void run_cmd(struct cmd* cmd)
 	    	if (isInterno(ecmd))
 			exec_cmdInterno(ecmd);
 		else{
-        	    	if (fork_or_panic("fork EXEC") == 0){
+        	    	if ((pidChild = fork_or_panic("fork EXEC")) == 0){
 				exec_cmd(ecmd);
 			}
-			TRY( wait(NULL) );
+			//TRY( wait(NULL) );
+			if (waitpid(pidChild,&status,0) < 0){
+				perror("run_cmd: waitpid");
+				exit(EXIT_FAILURE);
+	}
 		}
 
             	break;
@@ -832,13 +830,13 @@ void run_cmd(struct cmd* cmd)
             rcmd = (struct redrcmd*) cmd;
  	    if (isInterno((struct execcmd*) rcmd->cmd)){
 		if ((std_out = dup(1)) == -1){
-		    perror("dup");
+		    perror("run_cmd: dup");
                     exit(EXIT_FAILURE);
 		}
 		TRY( close(rcmd->fd) );
                 if ((fd = open(rcmd->file, rcmd->flags,rcmd->mode)) < 0)
                 {
-                    perror("open");
+                    perror("run_cmd: open");
                     exit(EXIT_FAILURE);
                 }
 	    	if (rcmd->cmd->type == EXEC)
@@ -847,19 +845,19 @@ void run_cmd(struct cmd* cmd)
 			run_cmd(rcmd->cmd);
 		//Se cierra el fichero creado para la redireccion
 		if (close(fd) == -1){
-		    perror("close");
+		    perror("run_cmd: close");
                     exit(EXIT_FAILURE);
 		}
 		//Se vuelve a abrir la salida estandar
 		if (dup2(std_out,1) == -1){
-			perror("dup2");
+			perror("run_cmd: dup2");
 			exit(EXIT_FAILURE);
 		}
 	    } else {
 		if (fork_or_panic("fork REDR") == 0){
                 	TRY( close(rcmd->fd) );
                 	if ((fd = open(rcmd->file, rcmd->flags,rcmd->mode)) < 0){
-                    		perror("open");
+                    		perror("run_cmd: open");
                     		exit(EXIT_FAILURE);
                 	}
 
@@ -937,7 +935,8 @@ void run_cmd(struct cmd* cmd)
 
         case BACK:
             bcmd = (struct backcmd*)cmd;
-            if (fork_or_panic("fork BACK") == 0)
+	    pid_t pidBack;
+            if ((pidBack = fork_or_panic("fork BACK")) == 0)
             {
                 if (bcmd->cmd->type == EXEC){
 			if (isInterno((struct execcmd*) bcmd->cmd))
@@ -950,6 +949,9 @@ void run_cmd(struct cmd* cmd)
                 }
 		exit(EXIT_SUCCESS);
             }
+	    else{
+		fprintf(stdout,"[%d]\n",pidBack);
+	    }
             break;
 
         case SUBS:
@@ -1583,12 +1585,19 @@ void parse_args(int argc, char** argv)
     }
 }
 
+//Manejador de señales para la señal SIGCHILD
+
+void handle_sigchld(int sig) {
+  int saved_errno = errno;
+  while (waitpid((pid_t)-1,0,WNOHANG) > 0) {}
+  errno = saved_errno;
+}
 
 int main(int argc, char** argv)
 {
     char* buf;
     struct cmd* cmd;
-    struct sigaction sa;  //Estructura sigaction para la señal SIGCHILD
+    struct sigaction sa;  //Estructura sigaction para la señal SIGCHLD
     struct sigaction sa1; //Estructura sigaction para la señal SIGQUIT	
     //Inicializacion de sa1
     memset(&sa1, 0, sizeof(sa1)); 
@@ -1615,6 +1624,14 @@ int main(int argc, char** argv)
         perror("sigaction");
         exit(EXIT_FAILURE);
     }
+
+    //Se establece la acción a realiar al recibir una señal SIGCHLD que en este caso
+    // esta definida por el handler
+    if (sigaction(SIGCHLD,&sa, NULL) == -1) {
+        perror("sigaction");
+        exit(EXIT_FAILURE);
+    }
+
     parse_args(argc, argv);
     unsetenv("OLDPWD");
 
