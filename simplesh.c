@@ -101,7 +101,7 @@ static int g_dbg_level = 0;
 //Array de comandos internos
 const char * cmdInternos[NUM_INTERNOS] = {"cwd","cd","exit","psplit","bjobs"};
 //Array de procesos activos en segundo plano
-char * backcmds[MAX_BACK];
+pid_t backcmds[MAX_BACK];
 // Delimitadores
 static const char WHITESPACE[] = " \t\r\n\v";
 // Caracteres especiales
@@ -109,6 +109,7 @@ static const char SYMBOLS[] = "<|>&;()";
 
 char pathAnterior[PATH_MAX];
 int std_out;
+int back_prcs = 0; //Número de procesos en segundo plano actual
 
 
 /******************************************************************************
@@ -964,6 +965,10 @@ void run_cmd(struct cmd* cmd)
             }
 	    else{
 		fprintf(stdout,"[%d]\n",pidBack);
+		if (back_prcs < MAX_BACK){
+			backcmds[back_prcs] = pidBack;
+			back_prcs++;
+		}
 	    }
             break;
 
@@ -1606,7 +1611,11 @@ void handle_sigchld(int sig) {
   int saved_errno = errno;
   pid_t pidChild;
   while ((pidChild = waitpid((pid_t)-1,0,WNOHANG)) > 0) {
-	
+	for (int i=0; i< MAX_BACK;i++){
+		if (backcmds[i] == pidChild){
+			fprintf(stdout,"[%d]\n",pidChild);
+		}
+	}
   }
   /*if (pidChild == -1){
 	perror("handle_sigchld: waitpid");
