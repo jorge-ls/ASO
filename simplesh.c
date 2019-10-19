@@ -1560,7 +1560,7 @@ void exec_cmdInterno(struct execcmd * ecmd){
 
 int isInterno(struct execcmd* ecmd){
 
-	if (ecmd->argv[0] == NULL) exit(EXIT_SUCCESS);
+	if (ecmd->argv[0] == NULL) return 0;
 	for (int i=0;i<NUM_INTERNOS;i++){
 		if (strcmp(ecmd->argv[0],cmdInternos[i]) == 0){
 			return 1;
