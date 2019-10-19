@@ -88,17 +88,20 @@ static int g_dbg_level = 0;
     } while( 0 )
 
 
-// NÃÂÃÂºmero mÃÂÃÂ¡ximo de argumentos de un comando
+// Número máximo de argumentos de un comando
 #define MAX_ARGS 16
-//NÃÂÃÂºmero de comandos internos
-#define NUM_INTERNOS 4
-//TamaÃÂ±o minimo del buffer de lectura
+//Número de comandos internos
+#define NUM_INTERNOS 5
+//Tamaño minimo del buffer de lectura
 #define MIN_BSIZE 1
-//TamaÃÂ±o maximo del bloque de lectura
+//Tamaño maximo del bloque de lectura
 #define MAX_BSIZE pow(2,20)
+//Número máximo de comandos activos en segundo plano
+#define MAX_BACK 8
 //Array de comandos internos
-const char * cmdInternos[NUM_INTERNOS] = {"cwd","cd","exit","psplit"};
-
+const char * cmdInternos[NUM_INTERNOS] = {"cwd","cd","exit","psplit","bjobs"};
+//Array de procesos activos en segundo plano
+char * backcmds[MAX_BACK];
 // Delimitadores
 static const char WHITESPACE[] = " \t\r\n\v";
 // Caracteres especiales
@@ -802,6 +805,8 @@ void run_cmd(struct cmd* cmd)
     int fd;
     int status;
     pid_t pidChild;
+    pid_t leftChild;
+    pid_t rightChild;
 
     DPRINTF(DBG_TRACE, "STR\n");
 
@@ -821,7 +826,7 @@ void run_cmd(struct cmd* cmd)
 			if (waitpid(pidChild,&status,0) < 0){
 				perror("run_cmd: waitpid");
 				exit(EXIT_FAILURE);
-	}
+			}
 		}
 
             	break;
@@ -889,7 +894,7 @@ void run_cmd(struct cmd* cmd)
             }
 
             // Ejecución del hijo de la izquierda
-            if (fork_or_panic("fork PIPE left") == 0)
+            if ((leftChild = fork_or_panic("fork PIPE left")) == 0)
             {
                 TRY( close(STDOUT_FILENO) );
                 TRY( dup(p[1]) );
@@ -908,7 +913,7 @@ void run_cmd(struct cmd* cmd)
             }
 
             // Ejecución del hijo de la derecha
-            if (fork_or_panic("fork PIPE right") == 0)
+            if ((rightChild = fork_or_panic("fork PIPE right")) == 0)
             {
                 TRY( close(STDIN_FILENO) );
                 TRY( dup(p[0]) );
@@ -929,8 +934,16 @@ void run_cmd(struct cmd* cmd)
             TRY( close(p[1]) );
 
             // Esperar a ambos hijos
-            TRY( wait(NULL) );
-            TRY( wait(NULL) );
+            //TRY( wait(NULL) );
+            //TRY( wait(NULL) );
+	    if (waitpid(leftChild,&status,0) < 0){
+		perror("run_cmd: waitpid");
+		exit(EXIT_FAILURE);
+	    }
+	    if (waitpid(rightChild,&status,0) < 0){
+		perror("run_cmd: waitpid");
+		exit(EXIT_FAILURE);
+	    }
             break;
 
         case BACK:
@@ -1488,7 +1501,9 @@ void run_psplit(struct execcmd * ecmd){
 			}
 			pids[nprocs] = frk;
 			nprocs++;
-			if ( nprocs == procs || ecmd->argc - i == 1 ) {
+			//Esperamos a los procesos anteriores cuando cuando se alcanza el numero máximo de procesos en vuelo permitido
+			// o cuando se llega al ultimo fichero
+			if ( nprocs == procs || ecmd->argc - i == 1 ) { 
 				for (int i=0;i<nprocs;i++){
 					if(waitpid(pids[i],&status,0) < 0){
 						perror("run_psplit: waitpid");
@@ -1589,7 +1604,14 @@ void parse_args(int argc, char** argv)
 
 void handle_sigchld(int sig) {
   int saved_errno = errno;
-  while (waitpid((pid_t)-1,0,WNOHANG) > 0) {}
+  pid_t pidChild;
+  while ((pidChild = waitpid((pid_t)-1,0,WNOHANG)) > 0) {
+	
+  }
+  /*if (pidChild == -1){
+	perror("handle_sigchld: waitpid");
+        exit(EXIT_FAILURE);
+  }*/
   errno = saved_errno;
 }
 
@@ -1614,10 +1636,10 @@ int main(int argc, char** argv)
     sigemptyset(&blocked_signals);
     sigaddset(&blocked_signals, SIGINT);
     //Se añade la señal SIGINT a la mascara de bloqueo de señales
-    if (sigprocmask(SIG_BLOCK, &blocked_signals, NULL) == -1) {
+    /*if (sigprocmask(SIG_BLOCK, &blocked_signals, NULL) == -1) {
         perror("sigprocmask");
         exit(EXIT_FAILURE);
-    }
+    }*/
     //Se establece la accion a realizar al recibir una señal SIGQUIT
     // que en este caso es ignorada
     if (sigaction(SIGQUIT,&sa1, NULL) == -1) {
