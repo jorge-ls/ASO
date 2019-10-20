@@ -935,8 +935,10 @@ void run_cmd(struct cmd* cmd)
             TRY( close(p[1]) );
 
             // Esperar a ambos hijos
+
             TRY( wait(NULL) );
             TRY( wait(NULL) );
+
 	    /*if (waitpid(leftChild,&status,0) < 0){
 		perror("run_cmd: waitpid");
 		exit(EXIT_FAILURE);
@@ -944,7 +946,9 @@ void run_cmd(struct cmd* cmd)
 	    if (waitpid(rightChild,&status,0) < 0){
 		perror("run_cmd: waitpid");
 		exit(EXIT_FAILURE);
+
 	    }*/
+
             break;
 
         case BACK:
@@ -1592,9 +1596,11 @@ void exec_cmdInterno(struct execcmd * ecmd){
 	else if (strcmp(ecmd->argv[0], "psplit") == 0) {
 		run_psplit(ecmd);
 	}
+
 	else if (strcmp(ecmd->argv[0], "bjobs") == 0){
 		run_bjobs(ecmd);
 	}
+
 }
 
 //Funcion que comprueba si un comando es interno
@@ -1664,10 +1670,12 @@ void handle_sigchld(int sig) {
 			}
 		}
   	}
+
   /*if (pidChild == -1){
 	perror("handle_sigchld: waitpid");
         exit(EXIT_FAILURE);
   }*/
+
   }
   else if (sig == SIGTERM){
 	for (int i=0; i< MAX_BACK;i++){
@@ -1681,6 +1689,7 @@ void handle_sigchld(int sig) {
 	}
   }
   
+
   errno = saved_errno;
 }
 
