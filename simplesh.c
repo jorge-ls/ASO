@@ -110,6 +110,7 @@ static const char SYMBOLS[] = "<|>&;()";
 char pathAnterior[PATH_MAX];
 int std_out;
 int back_prcs = 0; //Número de procesos en segundo plano actual
+sigset_t blocked_signals; // Señales bloqueadas en el proceso padre
 
 
 /******************************************************************************
@@ -808,6 +809,7 @@ void run_cmd(struct cmd* cmd)
     pid_t pidChild;
     pid_t leftChild;
     pid_t rightChild;
+    pid_t subsChild;
 
     DPRINTF(DBG_TRACE, "STR\n");
 
@@ -912,6 +914,12 @@ void run_cmd(struct cmd* cmd)
 		}
                 exit(EXIT_SUCCESS);
             }
+	    else {
+		if (sigaddset(&blocked_signals, SIGCHLD) == -1){
+			perror("run_cmd: sigaddset");
+			exit(EXIT_FAILURE);
+		}
+	    }
 
             // Ejecución del hijo de la derecha
             if ((rightChild = fork_or_panic("fork PIPE right")) == 0)
@@ -930,25 +938,32 @@ void run_cmd(struct cmd* cmd)
                     run_cmd(pcmd->right);
 		}
                 exit(EXIT_SUCCESS);
-            }
+            }else{
+		if (sigaddset(&blocked_signals, SIGCHLD) == -1){
+			perror("run_cmd: sigaddset");
+			exit(EXIT_FAILURE);
+		}
+	    }
             TRY( close(p[0]) );
             TRY( close(p[1]) );
 
             // Esperar a ambos hijos
 
-            TRY( wait(NULL) );
-            TRY( wait(NULL) );
+            //TRY( wait(NULL) );
+            //TRY( wait(NULL) );
 
-	    /*if (waitpid(leftChild,&status,0) < 0){
-		perror("run_cmd: waitpid");
+	    if (waitpid(leftChild,&status,0) < 0){
+		perror("run_cmd: waitpid1");
 		exit(EXIT_FAILURE);
 	    }
 	    if (waitpid(rightChild,&status,0) < 0){
-		perror("run_cmd: waitpid");
+		perror("run_cmd: waitpid2");
 		exit(EXIT_FAILURE);
-
-	    }*/
-
+	    }
+	    if (sigdelset(&blocked_signals, SIGCHLD) == -1){
+			perror("run_cmd: sigdelset");
+			exit(EXIT_FAILURE);
+	    }
             break;
 
         case BACK:
@@ -982,12 +997,16 @@ void run_cmd(struct cmd* cmd)
 
         case SUBS:
             scmd = (struct subscmd*) cmd;
-            if (fork_or_panic("fork SUBS") == 0)
+            if ((subsChild = fork_or_panic("fork SUBS")) == 0)
             {
                 run_cmd(scmd->cmd);
                 exit(EXIT_SUCCESS);
             }
-            TRY( wait(NULL) );
+            //TRY( wait(NULL) );
+	    if (waitpid(subsChild,&status,0) < 0){
+		perror("run_cmd: waitpid1");
+		exit(EXIT_FAILURE);
+	    }
             break;
 
         case INV:
@@ -1665,6 +1684,7 @@ void handle_sigchld(int sig) {
 				backcmds[i] = 0;
 				//if (back_prcs > 0){
 					back_prcs--;
+					printf("Número de procesos activos%d\n",back_prcs);
 				//}
 				
 			}
@@ -1683,7 +1703,8 @@ void handle_sigchld(int sig) {
 			fprintf(stdout,"[%d]\n",backcmds[i]);
 			backcmds[i] = 0;
 			//if (back_prcs > 0){
-				back_prcs--;
+			back_prcs--;
+			printf("Número de procesos activos%d\n",back_prcs);
 			//}
 		}
 	}
@@ -1711,7 +1732,7 @@ int main(int argc, char** argv)
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;
 
-    sigset_t blocked_signals;
+    //sigset_t blocked_signals;
     sigemptyset(&blocked_signals);
     sigaddset(&blocked_signals, SIGINT);
     //Se añade la señal SIGINT a la mascara de bloqueo de señales
