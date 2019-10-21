@@ -111,8 +111,7 @@ char pathAnterior[PATH_MAX];
 int std_out;
 int back_prcs = 0; //Número de procesos en segundo plano actual
 sigset_t blocked_signals; // Señales bloqueadas en el proceso
-struct sigaction sa;  //Estructura sigaction para la señal SIGCHLD y SIGTERM
-sigset_t old_blocked_signals;
+//sigset_t old_blocked_signals;
 
 /******************************************************************************
  * Funciones auxiliares
@@ -1005,14 +1004,17 @@ void run_cmd(struct cmd* cmd)
 		exit(EXIT_SUCCESS);
             }
 	    else{
-		fprintf(stdout,"[%d]\n",pidBack);
+		
 		if (back_prcs < MAX_BACK){
+			fprintf(stdout,"[%d]\n",pidBack);
 			int posActual = 0;
 			while (backcmds[posActual] != 0){
 				posActual++;
 			}
 			backcmds[posActual] = pidBack;
 			back_prcs++;
+		}else{
+			printf("Se ha excedido el numero maximo de procesos en segundo plano permitidos\n");
 		}
 	    }
             break;
@@ -1695,7 +1697,7 @@ void parse_args(int argc, char** argv)
     }
 }
 
-//Manejador de señales para la señal SIGCHILD
+//Manejador de señales para la señal SIGCHLD
 
 void handle_sigchld(int sig) {
   int saved_errno = errno;
@@ -1715,11 +1717,6 @@ void handle_sigchld(int sig) {
 			}
 		}
   	}
-
-  /*if (pidChild == -1){
-	perror("handle_sigchld: waitpid");
-        exit(EXIT_FAILURE);
-  }*/
 
   }
   else if (sig == SIGTERM){
@@ -1744,7 +1741,7 @@ int main(int argc, char** argv)
     char* buf;
     struct cmd* cmd;
     struct sigaction sa1; //Estructura sigaction para la señal SIGQUIT
-
+    struct sigaction sa;  //Estructura sigaction para la señal SIGCHLD y SIGTERM
     //Inicializacion de sa1
     memset(&sa1, 0, sizeof(sa1)); 
     sa1.sa_handler = SIG_IGN;
