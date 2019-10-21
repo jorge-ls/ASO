@@ -110,8 +110,9 @@ static const char SYMBOLS[] = "<|>&;()";
 char pathAnterior[PATH_MAX];
 int std_out;
 int back_prcs = 0; //Número de procesos en segundo plano actual
-sigset_t blocked_signals; // Señales bloqueadas en el proceso padre
-
+sigset_t blocked_signals; // Señales bloqueadas en el proceso
+struct sigaction sa;  //Estructura sigaction para la señal SIGCHLD y SIGTERM
+sigset_t old_blocked_signals;
 
 /******************************************************************************
  * Funciones auxiliares
@@ -794,7 +795,30 @@ void exec_cmd(struct execcmd* ecmd)
     panic("no se encontrÃÂÃÂ³ el comando '%s'\n", ecmd->argv[0]);
 }
 
+//Funcion que añade una señal a la mascara de bloqueo de señales del proceso
+void bloquearSenal(int sig){
+	if (sigaddset(&blocked_signals,sig) < 0){
+		perror("bloquearSenal: sigaddset");
+        	exit(EXIT_FAILURE);
+    	}
+	if (sigprocmask(SIG_SETMASK,&blocked_signals,NULL) < 0){ //Se añade la señal SIGCHLD a la mascara de bloqueo
+		perror("bloquearSenal: sigprocmask");
+        	exit(EXIT_FAILURE);
+	}
 
+}
+//Funcion que elimina una señal de la mascara de bloqueo de señales del proceso
+void desbloquearSenal(int sig){
+	if (sigdelset(&blocked_signals,sig) < 0){
+		perror("desbloquearSenal: sigdelset");
+        	exit(EXIT_FAILURE);
+    	}
+	if (sigprocmask(SIG_SETMASK,&blocked_signals,NULL) < 0){ 
+		perror("desbloquearSenal: sigprocmask");
+        	exit(EXIT_FAILURE);
+	}
+
+}
 void run_cmd(struct cmd* cmd)
 {
     struct execcmd* ecmd;
@@ -810,6 +834,7 @@ void run_cmd(struct cmd* cmd)
     pid_t leftChild;
     pid_t rightChild;
     pid_t subsChild;
+    pid_t redrChild;
 
     DPRINTF(DBG_TRACE, "STR\n");
 
@@ -822,14 +847,16 @@ void run_cmd(struct cmd* cmd)
 	    	if (isInterno(ecmd))
 			exec_cmdInterno(ecmd);
 		else{
+			bloquearSenal(SIGCHLD);
         	    	if ((pidChild = fork_or_panic("fork EXEC")) == 0){
 				exec_cmd(ecmd);
 			}
 			//TRY( wait(NULL) );
 			if (waitpid(pidChild,&status,0) < 0){
-				perror("run_cmd: waitpid");
+				perror("run_cmd: exec waitpid");
 				exit(EXIT_FAILURE);
 			}
+			desbloquearSenal(SIGCHLD);
 		}
 
             	break;
@@ -862,7 +889,8 @@ void run_cmd(struct cmd* cmd)
 			exit(EXIT_FAILURE);
 		}
 	    } else {
-		if (fork_or_panic("fork REDR") == 0){
+		bloquearSenal(SIGCHLD);
+		if ((redrChild = fork_or_panic("fork REDR")) == 0){
                 	TRY( close(rcmd->fd) );
                 	if ((fd = open(rcmd->file, rcmd->flags,rcmd->mode)) < 0){
                     		perror("run_cmd: open");
@@ -877,7 +905,12 @@ void run_cmd(struct cmd* cmd)
 			}
                 	exit(EXIT_SUCCESS);
             	}
-            	TRY( wait(NULL) );
+		if (waitpid(redrChild,&status,0) < 0){
+			perror("run_cmd: redr waitpid");
+			exit(EXIT_FAILURE);
+	    	}
+		desbloquearSenal(SIGCHLD);
+            	//TRY( wait(NULL) );
 
 	    }
             break;
@@ -897,6 +930,7 @@ void run_cmd(struct cmd* cmd)
             }
 
             // Ejecución del hijo de la izquierda
+	    bloquearSenal(SIGCHLD);
             if ((leftChild = fork_or_panic("fork PIPE left")) == 0)
             {
                 TRY( close(STDOUT_FILENO) );
@@ -914,12 +948,7 @@ void run_cmd(struct cmd* cmd)
 		}
                 exit(EXIT_SUCCESS);
             }
-	    else {
-		if (sigaddset(&blocked_signals, SIGCHLD) == -1){
-			perror("run_cmd: sigaddset");
-			exit(EXIT_FAILURE);
-		}
-	    }
+	    
 
             // Ejecución del hijo de la derecha
             if ((rightChild = fork_or_panic("fork PIPE right")) == 0)
@@ -938,12 +967,7 @@ void run_cmd(struct cmd* cmd)
                     run_cmd(pcmd->right);
 		}
                 exit(EXIT_SUCCESS);
-            }else{
-		if (sigaddset(&blocked_signals, SIGCHLD) == -1){
-			perror("run_cmd: sigaddset");
-			exit(EXIT_FAILURE);
-		}
-	    }
+            }
             TRY( close(p[0]) );
             TRY( close(p[1]) );
 
@@ -953,17 +977,15 @@ void run_cmd(struct cmd* cmd)
             //TRY( wait(NULL) );
 
 	    if (waitpid(leftChild,&status,0) < 0){
-		perror("run_cmd: waitpid1");
+		perror("run_cmd: pipe left waitpid");
 		exit(EXIT_FAILURE);
 	    }
 	    if (waitpid(rightChild,&status,0) < 0){
-		perror("run_cmd: waitpid2");
+		perror("run_cmd: pipe right waitpid");
 		exit(EXIT_FAILURE);
 	    }
-	    if (sigdelset(&blocked_signals, SIGCHLD) == -1){
-			perror("run_cmd: sigdelset");
-			exit(EXIT_FAILURE);
-	    }
+	    desbloquearSenal(SIGCHLD);
+	   
             break;
 
         case BACK:
@@ -996,6 +1018,7 @@ void run_cmd(struct cmd* cmd)
             break;
 
         case SUBS:
+	    bloquearSenal(SIGCHLD);
             scmd = (struct subscmd*) cmd;
             if ((subsChild = fork_or_panic("fork SUBS")) == 0)
             {
@@ -1004,9 +1027,10 @@ void run_cmd(struct cmd* cmd)
             }
             //TRY( wait(NULL) );
 	    if (waitpid(subsChild,&status,0) < 0){
-		perror("run_cmd: waitpid1");
+		perror("run_cmd: subs waitpid");
 		exit(EXIT_FAILURE);
 	    }
+	    desbloquearSenal(SIGCHLD);
             break;
 
         case INV:
@@ -1482,7 +1506,7 @@ void run_psplit(struct execcmd * ecmd){
 		printf("\t-b NBYTES Número máximo de bytes por fichero\n");
 		printf("\t-s BSIZE  Tamaño en bytes de los bloques leidos de [FILEn] o stdin\n");
 		printf("\t-p PROCS  Número máximo de procesos simultaneos\n");
-		printf("\t-h	Ayuda\n\n");
+		printf("\t-h        Ayuda\n\n");
 		break;
             default:
          	
@@ -1677,6 +1701,7 @@ void handle_sigchld(int sig) {
   int saved_errno = errno;
   pid_t pidChild;
   if (sig == SIGCHLD){
+	printf("Entra proceso\n");
 	while ((pidChild = waitpid((pid_t)-1,0,WNOHANG)) > 0) {
 		for (int i=0; i< MAX_BACK;i++){
 			if (backcmds[i] == pidChild){
@@ -1684,7 +1709,7 @@ void handle_sigchld(int sig) {
 				backcmds[i] = 0;
 				//if (back_prcs > 0){
 					back_prcs--;
-					printf("Número de procesos activos%d\n",back_prcs);
+					//printf("Número de procesos activos%d\n",back_prcs);
 				//}
 				
 			}
@@ -1704,7 +1729,7 @@ void handle_sigchld(int sig) {
 			backcmds[i] = 0;
 			//if (back_prcs > 0){
 			back_prcs--;
-			printf("Número de procesos activos%d\n",back_prcs);
+			//printf("Número de procesos activos%d\n",back_prcs);
 			//}
 		}
 	}
@@ -1718,7 +1743,6 @@ int main(int argc, char** argv)
 {
     char* buf;
     struct cmd* cmd;
-    struct sigaction sa;  //Estructura sigaction para la señal SIGCHLD y SIGTERM
     struct sigaction sa1; //Estructura sigaction para la señal SIGQUIT
 
     //Inicializacion de sa1
@@ -1729,12 +1753,21 @@ int main(int argc, char** argv)
     //Inicializacion de sa
     memset(&sa, 0, sizeof(sa)); 
     sa.sa_handler = handle_sigchld;
-    sigemptyset(&sa.sa_mask);
+    if (sigemptyset(&sa.sa_mask) < 0){
+	perror("main: sigemptyset1");
+        exit(EXIT_FAILURE);
+    }
     sa.sa_flags = 0;
 
     //sigset_t blocked_signals;
-    sigemptyset(&blocked_signals);
-    sigaddset(&blocked_signals, SIGINT);
+    if (sigemptyset(&blocked_signals) < 0){
+	perror("main: sigemptyset2");
+        exit(EXIT_FAILURE);
+    }
+    /*if (sigaddset(&blocked_signals, SIGINT) < 0){
+	perror("main: sigaddset");
+        exit(EXIT_FAILURE);
+    }*/
     //Se añade la señal SIGINT a la mascara de bloqueo de señales
     /*if (sigprocmask(SIG_BLOCK, &blocked_signals, NULL) == -1) {
         perror("sigprocmask");
@@ -1743,20 +1776,20 @@ int main(int argc, char** argv)
     //Se establece la accion a realizar al recibir una señal SIGQUIT
     // que en este caso es ignorada
     if (sigaction(SIGQUIT,&sa1, NULL) == -1) {
-        perror("sigaction");
+        perror("main: sigaction1");
         exit(EXIT_FAILURE);
     }
 
     //Se establece la acción a realizar al recibir una señal SIGCHLD que en este caso
     // esta definida por el handler
     if (sigaction(SIGCHLD,&sa, NULL) == -1) {
-        perror("sigaction");
+        perror("main: sigaction2");
         exit(EXIT_FAILURE);
     }
     //Se establece la acción a realizar al recibir una señal SIGTERM que en este caso
     // esta definida por el handler
     if (sigaction(SIGTERM,&sa, NULL) == -1) {
-        perror("sigaction");
+        perror("main: sigaction3");
         exit(EXIT_FAILURE);
     }
 
