@@ -1502,11 +1502,11 @@ void run_psplit(struct execcmd * ecmd){
 		opcionAyuda = 1;
 		printf("Uso: %s [-l NLINES] [-b NBYTES] [-s BSIZE] [-p PROCS] [FILE1] [FILE2]...\n", ecmd->argv[0]);
 		printf("\tOpciones:\n");
-		printf("\t-l NLINES Número maximo de líneas por fichero.\n");
-		printf("\t-b NBYTES Número maximo de bytes por fichero\n");
-		printf("\t-s BSIZE  Tamaño en bytes de los bloques leidos de [FILEn] o stdin\n");
-		printf("\t-p PROCS  Número máximo de procesos simultaneos\n");
-		printf("\t-h        Ayuda\n\n");
+		printf("	-l NLINES Número máximo de líneas por fichero.\n");
+		printf("	-b NBYTES Número maximo de bytes por fichero\n");
+		printf("	-s BSIZE  Tamaño en bytes de los bloques leidos de [FILEn] o stdin\n");
+		printf("	-p PROCS  Número máximo de procesos simultáneos\n");
+		printf("	-h        Ayuda\n\n");
 
 		break;
             default:
@@ -1519,10 +1519,10 @@ void run_psplit(struct execcmd * ecmd){
 	printf("psplit: Opciones incompatibles\n");
     }
     else if (bsize < MIN_BSIZE || bsize > MAX_BSIZE){
-	printf("psplit: Opción -s no valida\n");
+	printf("psplit: Opción -s no válida\n");
     }
     else if (procs == 0){
-	printf("psplit: Opción -p no valida\n");
+	printf("psplit: Opción -p no válida\n");
     }
     else if (opcionAyuda){}
 
@@ -1584,10 +1584,8 @@ void run_bjobs(struct execcmd * ecmd){
 	optind = 1;
 	int opcionAyuda = 0;
 	int opcionKill = 0;
-	printf("%d\n", ecmd->argc);
 	if(ecmd->argc > 1)
 		while ((opt = getopt(ecmd->argc, ecmd->argv, "kh")) != -1) {
-			printf("%s\n", ecmd->argv[1]);
 			switch (opt) {
 		    	case 'k':
 		        	opcionKill = 1;
