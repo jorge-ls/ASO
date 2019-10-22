@@ -1584,22 +1584,25 @@ void run_bjobs(struct execcmd * ecmd){
 	optind = 1;
 	int opcionAyuda = 0;
 	int opcionKill = 0;
-	while ((opt = getopt(ecmd->argc, ecmd->argv, "kh")) != -1) {
-        	switch (opt) {
-            	case 'k':
-                	opcionKill = 1;
-                	break;
-	    	case 'h':
-			opcionAyuda = 1;
-			printf("Uso: %s [-k] [-h]\n", ecmd->argv[0]);
-			printf("\tOpciones:\n");
-			printf("\t-k Mata todos los procesos en segundo plano.\n");
-			printf("\t-h Ayuda\n\n");
-			break;
-           	default:
-         		break;
-        	}
-        }
+	printf("%d\n", ecmd->argc);
+	if(ecmd->argc > 1)
+		while ((opt = getopt(ecmd->argc, ecmd->argv, "kh")) != -1) {
+			printf("%s\n", ecmd->argv[1]);
+			switch (opt) {
+		    	case 'k':
+		        	opcionKill = 1;
+		        	break;
+		    	case 'h':
+				opcionAyuda = 1;
+				printf("Uso: %s [-k] [-h]\n", ecmd->argv[0]);
+				printf("\tOpciones:\n");
+				printf("\t-k Mata todos los procesos en segundo plano.\n");
+				printf("\t-h Ayuda\n\n");
+				break;
+		   	default:
+		 		break;
+			}
+		}
         if (opcionAyuda){}
 
 	else if (opcionKill){ //Caso en el que hay que matar a todos los procesos en segundo plano activos
@@ -1694,6 +1697,7 @@ void parse_args(int argc, char** argv)
                 break;
         }
     }
+
 }
 
 //Manejador de señales
@@ -1722,18 +1726,7 @@ void handle_sigchld(int sig) {
 
   }
   else if (sig == SIGTERM){
-	for (int i=0; i< MAX_BACK;i++){
-		if (backcmds[i] != 0){
-			//fprintf(stdout,"[%d]\n",backcmds[i]);
-			backcmds[i] = 0;
-			//if (back_prcs > 0){
-			back_prcs--;
-			//printf("Número de procesos activos%d\n",back_prcs);
-			//}
-			
-		} 
 	exit(EXIT_SUCCESS);
-	}
   }
   
 
