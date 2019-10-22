@@ -1584,16 +1584,24 @@ void run_psplit(struct execcmd * ecmd){
 void run_bjobs(struct execcmd * ecmd){
 	char opt;
 	optind = 1;
-	int opcionAyuda = 0;
-	int opcionKill = 0;
+	//int opcionAyuda = 0;
+	//int opcionKill = 0;
 	if(ecmd->argc > 1)
 		while ((opt = getopt(ecmd->argc, ecmd->argv, "kh")) != -1) {
 			switch (opt) {
 		    	case 'k':
-		        	opcionKill = 1;
+		        	//opcionKill = 1;
+				for (int i=0; i< MAX_BACK;i++){
+					if (backcmds[i] != 0){
+						if (kill(backcmds[i], SIGTERM) == -1){
+							perror("run_bjobs: kill");
+							exit(EXIT_FAILURE);
+						}
+					}
+				}
 		        	break;
 		    	case 'h':
-				opcionAyuda = 1;
+				//opcionAyuda = 1;
 				printf("Uso: %s [-k] [-h]\n", ecmd->argv[0]);
 				printf("\tOpciones:\n");
 				printf("\t-k Mata todos los procesos en segundo plano.\n");
@@ -1603,18 +1611,18 @@ void run_bjobs(struct execcmd * ecmd){
 		 		break;
 			}
 		}
-        if (opcionAyuda){}
+        //if (opcionAyuda){}
 
-	else if (opcionKill){ //Caso en el que hay que matar a todos los procesos en segundo plano activos
+	/*else if (opcionKill){ //Caso en el que hay que matar a todos los procesos en segundo plano activos
 		for (int i=0; i< MAX_BACK;i++){
 			if (backcmds[i] != 0){
 				if (kill(backcmds[i], SIGTERM) == -1){
 					exit(EXIT_FAILURE);
 				}
 			}
+		}	
 			
-		}
-	}
+	}*/
 	else{ //Caso en el que se muestra los PID de los procesos en segundo plano activos
 		for (int i=0; i< MAX_BACK;i++){
 			if (backcmds[i] != 0){
