@@ -1574,7 +1574,8 @@ void run_psplit(struct execcmd * ecmd){
 			
 		}*/
 		int nprocs = 0;
-		int index = 0;
+		int indexAdd = 0;
+		int indexWait = 0;
 		for(int i = optind; i < ecmd->argc; i++){
 			frk = fork_or_panic("fork psplit");
 			if (frk == 0) {
@@ -1587,24 +1588,24 @@ void run_psplit(struct execcmd * ecmd){
 				auxPsplit(numLineas,numBytes,bsize,fd,ecmd->argv[i]);
 				exit(EXIT_SUCCESS);
 			}
-			pids[index] = frk;
+			pids[indexAdd] = frk;
 			nprocs++;
-			if (index + 1 == procs)
-				index = 0;
+			if (indexAdd + 1 == procs)
+				indexAdd = 0;
 			else 
-				index++;
+				indexAdd++;
 			
 			if ( nprocs == procs ) {
 				desbloquearSenal(SIGCHLD);
 				while(nprocs > 0) {					
-					if(waitpid(pids[index],&status,0) < 0){
+					if(waitpid(pids[indexWait],&status,0) < 0){
 							perror("run_psplit: waitpid");
 							exit(EXIT_FAILURE);
 						}
-					if (index + 1 == procs)
-						index = 0;
+					if (indexWait + 1 == procs)
+						indexWait = 0;
 					else 
-						index++;
+						indexWait++;
 					nprocs--;
 				}
 			}
