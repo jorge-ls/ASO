@@ -1582,12 +1582,12 @@ void run_psplit(struct execcmd * ecmd){
 				if ((fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU)) < 0){
 					perror("run_psplit: open");
                     			exit(EXIT_FAILURE);
-				} else {
-					bloquearSenal(SIGCHLD);
-				}
+				} 
 				auxPsplit(numLineas,numBytes,bsize,fd,ecmd->argv[i]);
 				exit(EXIT_SUCCESS);
-			}
+			} else {
+					bloquearSenal(SIGCHLD);
+				}
 			pids[indexAdd] = frk;
 			nprocs++;
 			if (indexAdd + 1 == procs)
@@ -1595,9 +1595,9 @@ void run_psplit(struct execcmd * ecmd){
 			else 
 				indexAdd++;
 			
-			if ( nprocs == procs ) {
-				while(nprocs > 0) {					
-					if(waitpid(pids[indexWait],&status,0) < 0){
+			if ( nprocs == procs || ecmd->argc - i == 1 ) {
+				while(nprocs > 0) {
+					if(waitpid((pid_t)pids[indexWait],&status,0) < 0){
 							perror("run_psplit: waitpid");
 							exit(EXIT_FAILURE);
 						}
@@ -1608,7 +1608,6 @@ void run_psplit(struct execcmd * ecmd){
 					nprocs--;
 				}
 				desbloquearSenal(SIGCHLD);
-
 			}
 		}
 		free(pids);
