@@ -1485,7 +1485,7 @@ void run_psplit(struct execcmd * ecmd){
     int numBytes = 0;
     int bsize = 1024;
     int procs = 1;
-
+    bloquearSenal(SIGCHLD);
     while ((opt = getopt(ecmd->argc, ecmd->argv, "l:b:s:p:h")) != -1) { //Parametro con : quiere decir que va seguido de un valor
         switch (opt) {
             case 'l':
@@ -1501,6 +1501,7 @@ void run_psplit(struct execcmd * ecmd){
 		procs = atoi(optarg);
 		break;
 	    case 'h':
+	    default:
 		opcionAyuda = 1;
 		printf("Uso: %s [-l NLINES] [-b NBYTES] [-s BSIZE] [-p PROCS] [FILE1] [FILE2]...\n", ecmd->argv[0]);
 		printf("\tOpciones:\n");
@@ -1511,9 +1512,7 @@ void run_psplit(struct execcmd * ecmd){
 		printf("	-h        Ayuda\n\n");
 
 		break;
-            default:
-         	
-                break;
+            
         }
     }
 
@@ -1543,11 +1542,15 @@ void run_psplit(struct execcmd * ecmd){
 	else { //Procesamiento de ficheros de entrada
 		int i = optind;
 		pid_t * pids = malloc(procs * sizeof(pid_t));
+		memset(pids,0,sizeof(pid_t));
 		if (pids == NULL){
 			perror("run_psplit: malloc");
 			exit(EXIT_FAILURE);
 		}
+		int procMasAntiguo = 0;
+		int indexMasAntiguo = 0;
 		int nprocs = 0;
+		int posActual;
 		for(int i = optind; i < ecmd->argc; i++){
 			frk = fork_or_panic("fork psplit");
 			if ( frk == 0 ) {
@@ -1558,11 +1561,32 @@ void run_psplit(struct execcmd * ecmd){
 				auxPsplit(numLineas,numBytes,bsize,fd,ecmd->argv[i]);
 				exit(EXIT_SUCCESS);
 			}
-			pids[nprocs] = frk;
+			//pids[nprocs] = frk;
+			if (procMasAntiguo == 0){
+				procMasAntiguo = frk;
+				indexMasAntiguo = nprocs;
+				
+			}
+			posActual = 0;
+			while (pids[posActual] != 0){
+				posActual++;
+			} 
+			pids[posActual] = frk;
 			nprocs++;
-			//Esperamos a los procesos anteriores cuando cuando se alcanza el numero maximo de procesos en vuelo permitido
-			// o cuando se llega al ultimo fichero
-			if ( nprocs == procs || ecmd->argc - i == 1 ) { 
+			if (nprocs == procs){ //Cuando se alcanza PROCS se espera al proceso mas antiguo
+				if(waitpid(procMasAntiguo,&status,0) < 0){
+					perror("run_psplit: waitpid");
+					exit(EXIT_FAILURE);
+				}
+				pids[indexMasAntiguo] = 0;
+				indexMasAntiguo++;
+				procMasAntiguo = pids[indexMasAntiguo];
+				nprocs--;
+			}
+
+
+
+			/*if (ecmd->argc - i == 1 ) { 
 				for (int i=0;i<nprocs;i++){
 					if(waitpid(pids[i],&status,0) < 0){
 						perror("run_psplit: waitpid");
@@ -1570,11 +1594,12 @@ void run_psplit(struct execcmd * ecmd){
 					}
 				}
 				nprocs = 0;
-			}		
+			}*/		
 			
 
 		}
 		free(pids);
+		desbloquearSenal(SIGCHLD);
     	}    
 		 
 }
@@ -1584,10 +1609,12 @@ void run_psplit(struct execcmd * ecmd){
 void run_bjobs(struct execcmd * ecmd){
 	char opt;
 	optind = 1;
+	opterr = 0;
 	//int opcionAyuda = 0;
 	//int opcionKill = 0;
 	if(ecmd->argc > 1)
 		while ((opt = getopt(ecmd->argc, ecmd->argv, "kh")) != -1) {
+			//printf("Opcion: %c optopt: %c\n",opt,optopt);
 			switch (opt) {
 		    	case 'k':
 		        	//opcionKill = 1;
@@ -1601,14 +1628,13 @@ void run_bjobs(struct execcmd * ecmd){
 				}
 		        	break;
 		    	case 'h':
+			default:
 				//opcionAyuda = 1;
 				printf("Uso: %s [-k] [-h]\n", ecmd->argv[0]);
 				printf("\tOpciones:\n");
 				printf("\t-k Mata todos los procesos en segundo plano.\n");
 				printf("\t-h Ayuda\n\n");
 				break;
-		   	default:
-		 		break;
 			}
 		}
         //if (opcionAyuda){}
@@ -1715,21 +1741,22 @@ void handle_sigchld(int sig) {
   pid_t pidChild;
   if (sig == SIGCHLD){
 	while ((pidChild = waitpid((pid_t)-1,0,WNOHANG)) > 0) {
-		//printf("Entra proceso");
+		printf("Entra señal SIGCHLD\n");
 		for (int i=0; i< MAX_BACK;i++){
 			if (backcmds[i] == pidChild){
 				fprintf(stdout,"[%d]\n",pidChild);
 				backcmds[i] = 0;
 				back_prcs--;
-				//printf("Número de procesos activos%d\n",back_prcs);
+				printf("Número de procesos activos%d\n",back_prcs);
 			}
 		}
   	}
 
   }
-  else if (sig == SIGTERM){
+  /*else if (sig == SIGTERM){
+	printf("Entra señal SIGTERM\n");
 	exit(EXIT_SUCCESS);
-  }
+  }*/
   
 
   errno = saved_errno;
