@@ -1547,11 +1547,8 @@ void run_psplit(struct execcmd * ecmd){
 			perror("run_psplit: malloc");
 			exit(EXIT_FAILURE);
 		}
-		int procMasAntiguo = 0;
-		int indexMasAntiguo = 0;
-		int nprocs = 0;
-		int posActual;
-		for(int i = optind; i < ecmd->argc; i++){
+
+		/*for(int i = optind; i < ecmd->argc; i++){
 			frk = fork_or_panic("fork psplit");
 			if ( frk == 0 ) {
 				if ((fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU)) < 0){
@@ -1586,7 +1583,7 @@ void run_psplit(struct execcmd * ecmd){
 
 
 
-			/*if (ecmd->argc - i == 1 ) { 
+			if (ecmd->argc - i == 1 ) { 
 				for (int i=0;i<nprocs;i++){
 					if(waitpid(pids[i],&status,0) < 0){
 						perror("run_psplit: waitpid");
@@ -1594,9 +1591,80 @@ void run_psplit(struct execcmd * ecmd){
 					}
 				}
 				nprocs = 0;
-			}*/		
+			}		
 			
-
+		}*/
+		int nprocs = 0;
+		int indexAdd = 0;
+		int indexWait = 0;
+		for(int i = optind; i < ecmd->argc; i++){
+			frk = fork_or_panic("fork psplit");
+			if (frk == 0) {
+				if ((fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU)) < 0){
+					perror("run_psplit: open");
+                    			exit(EXIT_FAILURE);
+				} 
+				auxPsplit(numLineas,numBytes,bsize,fd,ecmd->argv[i]);
+				exit(EXIT_SUCCESS);
+			} /*else {
+					bloquearSenal(SIGCHLD);
+				}*/
+			pids[indexAdd] = frk;
+			indexAdd++;
+			nprocs++;
+			/*if (indexAdd + 1 == procs)
+				indexAdd = 0;
+			else 
+				indexAdd++;*/
+			
+			if (nprocs == procs && ecmd->argc - i == 1 ){
+				for (int i = 0; i < procs;i++){
+					if(waitpid((pid_t)pids[i],&status,0) < 0){
+						perror("run_psplit: waitpid");
+						exit(EXIT_FAILURE);
+					}
+					nprocs--;
+				}
+			}
+			else if (nprocs == procs){
+				if(waitpid((pid_t)pids[indexWait],&status,0) < 0){
+					perror("run_psplit: waitpid");
+					exit(EXIT_FAILURE);
+				}
+				indexAdd = indexWait;
+				indexWait++;
+				nprocs--;
+			}
+			else if (ecmd->argc - i == 1){ 
+				for (int i = indexWait; i < procs;i++){
+					if(waitpid((pid_t)pids[i],&status,0) < 0){
+						perror("run_psplit: waitpid");
+						exit(EXIT_FAILURE);
+					}
+					nprocs--;
+				}
+				for (int i = 0; i < indexWait;i++){
+					if(waitpid((pid_t)pids[i],&status,0) < 0){
+						perror("run_psplit: waitpid");
+						exit(EXIT_FAILURE);
+					}
+					nprocs--;
+				}
+			}
+			/*if ( nprocs == procs || ecmd->argc - i == 1 ) {
+				while(nprocs > 0) {
+					if(waitpid((pid_t)pids[indexWait],&status,0) < 0){
+							perror("run_psplit: waitpid");
+							exit(EXIT_FAILURE);
+						}
+					if (indexWait + 1 == procs)
+						indexWait = 0;
+					else 
+						indexWait++;
+					nprocs--;
+				}
+				//desbloquearSenal(SIGCHLD);
+			}*/
 		}
 		free(pids);
 		desbloquearSenal(SIGCHLD);
