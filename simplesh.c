@@ -1547,53 +1547,6 @@ void run_psplit(struct execcmd * ecmd){
 			perror("run_psplit: malloc");
 			exit(EXIT_FAILURE);
 		}
-
-		/*for(int i = optind; i < ecmd->argc; i++){
-			frk = fork_or_panic("fork psplit");
-			if ( frk == 0 ) {
-				if ((fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU)) < 0){
-					perror("run_psplit: open");
-                    			exit(EXIT_FAILURE);
-				}
-				auxPsplit(numLineas,numBytes,bsize,fd,ecmd->argv[i]);
-				exit(EXIT_SUCCESS);
-			}
-			//pids[nprocs] = frk;
-			if (procMasAntiguo == 0){
-				procMasAntiguo = frk;
-				indexMasAntiguo = nprocs;
-				
-			}
-			posActual = 0;
-			while (pids[posActual] != 0){
-				posActual++;
-			} 
-			pids[posActual] = frk;
-			nprocs++;
-			if (nprocs == procs){ //Cuando se alcanza PROCS se espera al proceso mas antiguo
-				if(waitpid(procMasAntiguo,&status,0) < 0){
-					perror("run_psplit: waitpid");
-					exit(EXIT_FAILURE);
-				}
-				pids[indexMasAntiguo] = 0;
-				indexMasAntiguo++;
-				procMasAntiguo = pids[indexMasAntiguo];
-				nprocs--;
-			}
-
-
-
-			if (ecmd->argc - i == 1 ) { 
-				for (int i=0;i<nprocs;i++){
-					if(waitpid(pids[i],&status,0) < 0){
-						perror("run_psplit: waitpid");
-						exit(EXIT_FAILURE);
-					}
-				}
-				nprocs = 0;
-			}		
-			
-		}*/
 		int nprocs = 0;
 		int indexAdd = 0;
 		int indexWait = 0;
@@ -1606,52 +1559,26 @@ void run_psplit(struct execcmd * ecmd){
 				} 
 				auxPsplit(numLineas,numBytes,bsize,fd,ecmd->argv[i]);
 				exit(EXIT_SUCCESS);
-			} /*else {
-					bloquearSenal(SIGCHLD);
-				}*/
+			} 
 			pids[indexAdd] = frk;
-			indexAdd++;
 			nprocs++;
-			/*if (indexAdd + 1 == procs)
+			if (indexAdd + 1 == procs)
 				indexAdd = 0;
 			else 
-				indexAdd++;*/
+				indexAdd++;
 			
-			if (nprocs == procs && ecmd->argc - i == 1 ){
-				for (int i = 0; i < procs;i++){
-					if(waitpid((pid_t)pids[i],&status,0) < 0){
-						perror("run_psplit: waitpid");
-						exit(EXIT_FAILURE);
-					}
+			if ( nprocs == procs ) {
+					if(waitpid((pid_t)pids[indexWait],&status,0) < 0){
+							perror("run_psplit: waitpid");
+							exit(EXIT_FAILURE);
+						}
+					if (indexWait + 1 == procs)
+						indexWait = 0;
+					else 
+						indexWait++;
 					nprocs--;
-				}
-			}
-			else if (nprocs == procs){
-				if(waitpid((pid_t)pids[indexWait],&status,0) < 0){
-					perror("run_psplit: waitpid");
-					exit(EXIT_FAILURE);
-				}
-				indexAdd = indexWait;
-				indexWait++;
-				nprocs--;
-			}
-			else if (ecmd->argc - i == 1){ 
-				for (int i = indexWait; i < procs;i++){
-					if(waitpid((pid_t)pids[i],&status,0) < 0){
-						perror("run_psplit: waitpid");
-						exit(EXIT_FAILURE);
-					}
-					nprocs--;
-				}
-				for (int i = 0; i < indexWait;i++){
-					if(waitpid((pid_t)pids[i],&status,0) < 0){
-						perror("run_psplit: waitpid");
-						exit(EXIT_FAILURE);
-					}
-					nprocs--;
-				}
-			}
-			/*if ( nprocs == procs || ecmd->argc - i == 1 ) {
+			} 
+			if (ecmd->argc - i == 1 ) {
 				while(nprocs > 0) {
 					if(waitpid((pid_t)pids[indexWait],&status,0) < 0){
 							perror("run_psplit: waitpid");
@@ -1662,9 +1589,10 @@ void run_psplit(struct execcmd * ecmd){
 					else 
 						indexWait++;
 					nprocs--;
-				}
-				//desbloquearSenal(SIGCHLD);
-			}*/
+
+				} 
+			}
+
 		}
 		free(pids);
 		desbloquearSenal(SIGCHLD);
@@ -1677,23 +1605,22 @@ void run_psplit(struct execcmd * ecmd){
 void run_bjobs(struct execcmd * ecmd){
 	char opt;
 	optind = 1;
-	opterr = 0;
-	//int opcionAyuda = 0;
-	//int opcionKill = 0;
+	//opterr = 0;
+	int opcionKill = 0;
 	if(ecmd->argc > 1)
 		while ((opt = getopt(ecmd->argc, ecmd->argv, "kh")) != -1) {
 			//printf("Opcion: %c optopt: %c\n",opt,optopt);
 			switch (opt) {
 		    	case 'k':
-		        	//opcionKill = 1;
-				for (int i=0; i< MAX_BACK;i++){
+		        	opcionKill = 1;
+				/*for (int i=0; i< MAX_BACK;i++){
 					if (backcmds[i] != 0){
 						if (kill(backcmds[i], SIGTERM) == -1){
 							perror("run_bjobs: kill");
 							exit(EXIT_FAILURE);
 						}
 					}
-				}
+				}*/
 		        	break;
 		    	case 'h':
 			default:
@@ -1705,18 +1632,18 @@ void run_bjobs(struct execcmd * ecmd){
 				break;
 			}
 		}
-        //if (opcionAyuda){}
 
-	/*else if (opcionKill){ //Caso en el que hay que matar a todos los procesos en segundo plano activos
+	if (opcionKill){ //Caso en el que hay que matar a todos los procesos en segundo plano activos
 		for (int i=0; i< MAX_BACK;i++){
 			if (backcmds[i] != 0){
 				if (kill(backcmds[i], SIGTERM) == -1){
+					perror("run_bjobs: kill");
 					exit(EXIT_FAILURE);
 				}
 			}
 		}	
 			
-	}*/
+	}
 	else{ //Caso en el que se muestra los PID de los procesos en segundo plano activos
 		for (int i=0; i< MAX_BACK;i++){
 			if (backcmds[i] != 0){
@@ -1809,22 +1736,22 @@ void handle_sigchld(int sig) {
   pid_t pidChild;
   if (sig == SIGCHLD){
 	while ((pidChild = waitpid((pid_t)-1,0,WNOHANG)) > 0) {
-		printf("Entra señal SIGCHLD\n");
+		//printf("Entra señal SIGCHLD\n");
 		for (int i=0; i< MAX_BACK;i++){
 			if (backcmds[i] == pidChild){
 				fprintf(stdout,"[%d]\n",pidChild);
 				backcmds[i] = 0;
 				back_prcs--;
-				printf("Número de procesos activos%d\n",back_prcs);
+				//printf("Número de procesos activos%d\n",back_prcs);
 			}
 		}
   	}
 
   }
-  /*else if (sig == SIGTERM){
-	printf("Entra señal SIGTERM\n");
+  else if (sig == SIGTERM){
+	//printf("Entra señal SIGTERM\n");
 	exit(EXIT_SUCCESS);
-  }*/
+  }
   
 
   errno = saved_errno;
