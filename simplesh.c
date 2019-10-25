@@ -1595,7 +1595,18 @@ void run_psplit(struct execcmd * ecmd){
 			else 
 				indexAdd++;
 			
-			if ( nprocs == procs || ecmd->argc - i == 1 ) {
+			if ( nprocs == procs ) {
+					if(waitpid((pid_t)pids[indexWait],&status,0) < 0){
+							perror("run_psplit: waitpid");
+							exit(EXIT_FAILURE);
+						}
+					if (indexWait + 1 == procs)
+						indexWait = 0;
+					else 
+						indexWait++;
+					nprocs--;
+			} 
+			if (ecmd->argc - i == 1 ) {
 				while(nprocs > 0) {
 					if(waitpid((pid_t)pids[indexWait],&status,0) < 0){
 							perror("run_psplit: waitpid");
@@ -1606,7 +1617,7 @@ void run_psplit(struct execcmd * ecmd){
 					else 
 						indexWait++;
 					nprocs--;
-				}
+				} 
 				desbloquearSenal(SIGCHLD);
 			}
 		}
