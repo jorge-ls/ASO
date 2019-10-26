@@ -88,7 +88,7 @@ static int g_dbg_level = 0;
     } while( 0 )
 
 
-// Número maximo de argumentos de un comando
+//Número maximo de argumentos de un comando
 #define MAX_ARGS 16
 //Número de comandos internos
 #define NUM_INTERNOS 5
@@ -800,7 +800,7 @@ void bloquearSenal(int sig){
 		perror("bloquearSenal: sigaddset");
         	exit(EXIT_FAILURE);
     	}
-	if (sigprocmask(SIG_SETMASK,&blocked_signals,NULL) < 0){ //Se añade la señal SIGCHLD a la mascara de bloqueo
+	if (sigprocmask(SIG_SETMASK,&blocked_signals,NULL) < 0){ 
 		perror("bloquearSenal: sigprocmask");
         	exit(EXIT_FAILURE);
 	}
@@ -843,10 +843,10 @@ void run_cmd(struct cmd* cmd)
     {
         case EXEC:
             	ecmd = (struct execcmd*) cmd;
-	    	if (isInterno(ecmd))
+	    	if (isInterno(ecmd)) //Caso en el que se ejecuta un comando interno 
 			exec_cmdInterno(ecmd);
-		else{
-			bloquearSenal(SIGCHLD);
+		else{ //Comando externo
+			bloquearSenal(SIGCHLD); //Se bloquea la señal SIGCHLD en cada caso para que no se ejecute el waitpid del manejador
         	    	if ((pidChild = fork_or_panic("fork EXEC")) == 0){
 				exec_cmd(ecmd);
 			}
@@ -855,15 +855,15 @@ void run_cmd(struct cmd* cmd)
 				perror("run_cmd: exec waitpid");
 				exit(EXIT_FAILURE);
 			}
-			desbloquearSenal(SIGCHLD);
+			desbloquearSenal(SIGCHLD); //Cuando se ejecuta el waitpid anterior se desbloquea la señal
 		}
 
             	break;
 
-        case REDR:
+        case REDR: 
             rcmd = (struct redrcmd*) cmd;
  	    if (isInterno((struct execcmd*) rcmd->cmd)){
-		if ((std_out = dup(1)) == -1){
+		if ((std_out = dup(1)) == -1){ //Se crea una copia de stdout 
 		    perror("run_cmd: dup");
                     exit(EXIT_FAILURE);
 		}
@@ -914,13 +914,13 @@ void run_cmd(struct cmd* cmd)
 	    }
             break;
 
-        case LIST:
+        case LIST: 
             lcmd = (struct listcmd*) cmd;
             run_cmd(lcmd->left);
             run_cmd(lcmd->right);
             break;
 
-        case PIPE:
+        case PIPE: 
             pcmd = (struct pipecmd*)cmd;
             if (pipe(p) < 0)
             {
@@ -1005,8 +1005,8 @@ void run_cmd(struct cmd* cmd)
             }
 	    else{
 		
-		if (back_prcs < MAX_BACK){
-			fprintf(stdout,"[%d]\n",pidBack);
+		if (back_prcs < MAX_BACK){ //Se comprueba que no se supera el numero máximo de comandos en segundo plano activos
+			fprintf(stdout,"[%d]\n",pidBack); //Se imprime el PID del proceso en segundo plano que se ejecuta
 			int posActual = 0;
 			while (backcmds[posActual] != 0){
 				posActual++;
@@ -1236,14 +1236,14 @@ void run_exit(struct execcmd * ecmd){
 	struct cmd * cmd = (struct cmd*) ecmd;
 	free_cmd(cmd);
 	free(cmd);
-	exit(0);
+	exit(0); //Termina el proceso que ejecuta la llamada
 }
 
-//Funcion del comando interno cwd
+//Funcion del comando interno cwd que muestra el path del directorio actual
 
 void run_cwd(){
 	char path[PATH_MAX];
-	if (!getcwd(path,PATH_MAX)){
+	if (!getcwd(path,PATH_MAX)){ 
 		perror("run_cwd: getcwd");
 		exit(EXIT_FAILURE);
 	}
@@ -1254,13 +1254,13 @@ void run_cwd(){
 //Funcion del comando interno cd
 
 void run_cd(struct execcmd * ecmd){
-	if (ecmd->argv[1] == NULL) {
+	if (ecmd->argv[1] == NULL) { //cd sin argumentos
 		char path[PATH_MAX];
 		getcwd(path,PATH_MAX);
 		setenv("OLDPWD", path, 1);
-		chdir(getenv("HOME"));
+		chdir(getenv("HOME")); //Cambia al directorio por defecto 
 	}
-	else if (strcmp(ecmd->argv[1],"..") == 0) {
+	else if (strcmp(ecmd->argv[1],"..") == 0) { // cd ..
 		char path[PATH_MAX];
 		getcwd(path,PATH_MAX);
 		setenv("OLDPWD", path, 1);
@@ -1271,23 +1271,23 @@ void run_cd(struct execcmd * ecmd){
 				break;
 			}
 		}
-		chdir(path);
+		chdir(path); //Cambia al directorio padre del directorio actual
 	}
-	else if (strcmp(ecmd->argv[1],"-") == 0) {
+	else if (strcmp(ecmd->argv[1],"-") == 0) { // cd -
 		char path[PATH_MAX];
 		getcwd(path,PATH_MAX);
 		char * oldpwd = getenv("OLDPWD");
 		if (oldpwd == NULL) {
 			printf("run_cd: Variable OLDPWD no definida\n");
 		} else {
-			chdir(oldpwd);
+			chdir(oldpwd); //Cambia al directorio de trabajo previo
 			setenv("OLDPWD", path, 1);
 		}
 	}
-	else {
+	else { //Caso en el que se especifica un directorio concreto 
 		char path[PATH_MAX];
 		getcwd(path,PATH_MAX);
-		if (ecmd->argv[2] != NULL){
+		if (ecmd->argv[2] != NULL){ //El comando cd solo puede tener un argumento  
 			printf("run_cd: Demasiados argumentos\n");
 		}
 		else if (chdir(ecmd->argv[1]) != 0){
@@ -1301,7 +1301,7 @@ void run_cd(struct execcmd * ecmd){
 
 }
 
-
+//Funcion para cerrar un descriptor de fichero
 void closeFile(int fd){
 	if (close(fd) < 0){
 		perror("close");
@@ -1309,6 +1309,7 @@ void closeFile(int fd){
 	}
 }
 
+//Funcion para sincronizar un descriptor de fichero
 void fsyncFile(int fd){
 	if (fsync(fd) < 0){
 		perror("fsync");
@@ -1445,7 +1446,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 		
 	}
 	
-	else if (numBytes == 0 && numLineas == 0){
+	else if (numBytes == 0 && numLineas == 0){ //Caso en el que no se especifica ni el numero maximo de bytes por fichero ni el numero maximo de lineas 
 		sprintf(newFile,"%s%d",nombreFichero,numFile);
 		if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC, S_IRWXU)) < 0){
 			perror("auxPsplit: open");
@@ -1483,24 +1484,24 @@ void run_psplit(struct execcmd * ecmd){
     int status;
     int numLineas = 0;
     int numBytes = 0;
-    int bsize = 1024;
-    int procs = 1;
-    bloquearSenal(SIGCHLD);
+    int bsize = 1024; 
+    int procs = 1; 
+    bloquearSenal(SIGCHLD); //Se bloquea la señal SIGCHLD para que no se ejecute el waitpid del manejador
     while ((opt = getopt(ecmd->argc, ecmd->argv, "l:b:s:p:h")) != -1) { //Parametro con : quiere decir que va seguido de un valor
         switch (opt) {
-            case 'l':
+            case 'l':  
                 numLineas = atoi(optarg);
                 break;
-            case 'b':
-                numBytes = atoi(optarg);
+            case 'b': 
+                numBytes = atoi(optarg); 
                 break;
-	    case 's':
+	    case 's':  
 		bsize = atoi(optarg);
 		break;
-	    case 'p':
+	    case 'p': 
 		procs = atoi(optarg);
 		break;
-	    case 'h':
+	    case 'h': 
 	    default:
 		opcionAyuda = 1;
 		printf("Uso: %s [-l NLINES] [-b NBYTES] [-s BSIZE] [-p PROCS] [FILE1] [FILE2]...\n", ecmd->argv[0]);
@@ -1595,7 +1596,7 @@ void run_psplit(struct execcmd * ecmd){
 
 		}
 		free(pids);
-		desbloquearSenal(SIGCHLD);
+		desbloquearSenal(SIGCHLD); //Tras haberse ejecutado los waitpid anteriores se desbloquea la señal SIGCHLD
     	}    
 		 
 }
@@ -1607,36 +1608,28 @@ void run_bjobs(struct execcmd * ecmd){
 	optind = 1;
 	//opterr = 0;
 	int opcionKill = 0;
-	if(ecmd->argc > 1)
-		while ((opt = getopt(ecmd->argc, ecmd->argv, "kh")) != -1) {
-			//printf("Opcion: %c optopt: %c\n",opt,optopt);
+	//if(ecmd->argc > 1)
+		while ((opt = getopt(ecmd->argc, ecmd->argv, "kh")) != -1) { //Se procesa la opción indicada
 			switch (opt) {
-		    	case 'k':
-		        	opcionKill = 1;
-				/*for (int i=0; i< MAX_BACK;i++){
-					if (backcmds[i] != 0){
-						if (kill(backcmds[i], SIGTERM) == -1){
-							perror("run_bjobs: kill");
-							exit(EXIT_FAILURE);
-						}
-					}
-				}*/
-		        	break;
-		    	case 'h':
-			default:
-				//opcionAyuda = 1;
-				printf("Uso: %s [-k] [-h]\n", ecmd->argv[0]);
-				printf("\tOpciones:\n");
-				printf("\t-k Mata todos los procesos en segundo plano.\n");
-				printf("\t-h Ayuda\n\n");
-				break;
-			}
+		    		case 'k':
+		        		opcionKill = 1;
+		        		break;
+		    		case 'h': //Opcion de ayuda
+				default:
+					//opcionAyuda = 1;
+					printf("Uso: %s [-k] [-h]\n", ecmd->argv[0]);
+					printf("\tOpciones:\n");
+					printf("\t-k Mata todos los procesos en segundo plano.\n");
+					printf("\t-h Ayuda\n\n");
+					break;
+				
+				}
 		}
 
 	if (opcionKill){ //Caso en el que hay que matar a todos los procesos en segundo plano activos
 		for (int i=0; i< MAX_BACK;i++){
 			if (backcmds[i] != 0){
-				if (kill(backcmds[i], SIGTERM) == -1){
+				if (kill(backcmds[i], SIGTERM) == -1){ //Se envia la señal SIGTERM a cada proceso 
 					perror("run_bjobs: kill");
 					exit(EXIT_FAILURE);
 				}
@@ -1660,20 +1653,20 @@ void run_bjobs(struct execcmd * ecmd){
 
 void exec_cmdInterno(struct execcmd * ecmd){
 	assert(ecmd->type == EXEC);
-	if (strcmp(ecmd->argv[0],"cwd") == 0){
+	if (strcmp(ecmd->argv[0],"cwd") == 0){ //Caso en el que se ejecuta el comando cwd
 		run_cwd();
 	}
-	else if (strcmp(ecmd->argv[0],"exit") == 0){
+	else if (strcmp(ecmd->argv[0],"exit") == 0){ //Caso en el que se ejecuta el comando exit
 		run_exit(ecmd);
 	}
-	else if (strcmp(ecmd->argv[0], "cd") == 0) {
+	else if (strcmp(ecmd->argv[0], "cd") == 0) { //Caso en el que se ejecuta el comando cd
 		run_cd(ecmd);
 	}
-	else if (strcmp(ecmd->argv[0], "psplit") == 0) {
+	else if (strcmp(ecmd->argv[0], "psplit") == 0) { //Caso en el que se ejecuta el comando psplit 
 		run_psplit(ecmd);
 	}
 
-	else if (strcmp(ecmd->argv[0], "bjobs") == 0){
+	else if (strcmp(ecmd->argv[0], "bjobs") == 0){ //Caso en el que se ejecuta el comando bjobs
 		run_bjobs(ecmd);
 	}
 
@@ -1734,12 +1727,12 @@ void parse_args(int argc, char** argv)
 void handle_sigchld(int sig) {
   int saved_errno = errno;
   pid_t pidChild;
-  if (sig == SIGCHLD){
+  if (sig == SIGCHLD){ //Tratamiento para la señal SIGCHLD
 	while ((pidChild = waitpid((pid_t)-1,0,WNOHANG)) > 0) {
 		//printf("Entra señal SIGCHLD\n");
 		for (int i=0; i< MAX_BACK;i++){
 			if (backcmds[i] == pidChild){
-				fprintf(stdout,"[%d]\n",pidChild);
+				fprintf(stdout,"[%d]\n",pidChild); //Se muestra el PID del proceso que ha terminado
 				backcmds[i] = 0;
 				back_prcs--;
 				//printf("Número de procesos activos%d\n",back_prcs);
@@ -1748,7 +1741,7 @@ void handle_sigchld(int sig) {
   	}
 
   }
-  else if (sig == SIGTERM){
+  else if (sig == SIGTERM){ //Tratamiento para la señal SIGTERM
 	//printf("Entra señal SIGTERM\n");
 	exit(EXIT_SUCCESS);
   }
@@ -1765,12 +1758,12 @@ int main(int argc, char** argv)
     struct sigaction sa;  //Estructura sigaction para la señal SIGCHLD y SIGTERM
     //Inicializacion de sa1
     memset(&sa1, 0, sizeof(sa1)); 
-    sa1.sa_handler = SIG_IGN;
+    sa1.sa_handler = SIG_IGN; //Se establece la accion de ignorar la señal
     //sigemptyset(&sa.sa_mask);
     
     //Inicializacion de sa
     memset(&sa, 0, sizeof(sa)); 
-    sa.sa_handler = handle_sigchld;
+    sa.sa_handler = handle_sigchld; //Se establece el manejador de señales
     if (sigemptyset(&sa.sa_mask) < 0){
 	perror("main: sigemptyset1");
         exit(EXIT_FAILURE);
@@ -1782,15 +1775,15 @@ int main(int argc, char** argv)
 	perror("main: sigemptyset2");
         exit(EXIT_FAILURE);
     }
-    /*if (sigaddset(&blocked_signals, SIGINT) < 0){
+    if (sigaddset(&blocked_signals, SIGINT) < 0){
 	perror("main: sigaddset");
         exit(EXIT_FAILURE);
-    }*/
+    }
     //Se añade la señal SIGINT a la mascara de bloqueo de señales
-    /*if (sigprocmask(SIG_BLOCK, &blocked_signals, NULL) == -1) {
+    if (sigprocmask(SIG_BLOCK, &blocked_signals, NULL) == -1) {
         perror("sigprocmask");
         exit(EXIT_FAILURE);
-    }*/
+    }
     //Se establece la accion a realizar al recibir una señal SIGQUIT
     // que en este caso es ignorada
     if (sigaction(SIGQUIT,&sa1, NULL) == -1) {
