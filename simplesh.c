@@ -6,7 +6,7 @@
  * Facultad de Informatica de la Universidad de Murcia
  *
  * Alumnos: ROS MARTÍNEZ, MARÍA (G2.2)
- *          APELLIDOS, NOMBRE (GX.X)
+ *          LOPEZ SAURA, JORGE (G2.2)
  *
  * Convocatoria: FEBRERO
  */
