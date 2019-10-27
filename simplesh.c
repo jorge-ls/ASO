@@ -5,10 +5,10 @@
  * Departamento de Ingenieria y Tecnologia de Computadores
  * Facultad de Informatica de la Universidad de Murcia
  *
- * Alumnos: APELLIDOS, NOMBRE (GX.X)
+ * Alumnos: ROS MARTÍNEZ, MARÍA (G2.2)
  *          APELLIDOS, NOMBRE (GX.X)
  *
- * Convocatoria: FEBRERO/JUNIO/JULIO
+ * Convocatoria: FEBRERO
  */
 
 
