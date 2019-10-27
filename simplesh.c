@@ -1319,43 +1319,45 @@ void fsyncFile(int fd){
 
 
 void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero){
-	int nBytesTotales = 0;
-	int subfd = 0;
-    	int bytesLeidos;
-	int bytesEscritos;
-    	int bytesRestantes = 0;
-	int nLineasTotales = 0;
+	int nBytesTotales = 0;	// Variable auxiliar para volver al principio del buffer tras utilizarlo
+	int subfd = 0;		// fichero en el que se está escribiendo
+    	int bytesLeidos;	
+	int bytesEscritos;	
+    	int bytesRestantes = 0;	// bytes que quedan hasta escribir el número de bytes "-b"
+	int nLineasTotales = 0;	
 	int lineasLeidas;
-    	char * buffer = NULL;
-	int numFile = 0;
-	char newFile[50];
-
+    	char * buffer = NULL;	
+	int numFile = 0;	// número del fichero que se está escribiendo
+	char newFile[50];	// nombre del fichero que se está escribiendo (con número)
+	
 	buffer = malloc(bsize * sizeof(char));
 	if (buffer == NULL){
 		perror("auxPsplit: malloc");
 		exit(EXIT_FAILURE);
 	}
 	if (numBytes != 0){ //Caso en el que hay limite en el número de bytes
-		int nBytesFA = 0;
+		int nBytesFA = 0;	// bytes que se han escrito en el fichero actual
+		// creación del primer fichero
 		sprintf(newFile,"%s%d",nombreFichero,numFile);
 		if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC,S_IRWXU)) < 0){
 			perror("open");
 			exit(EXIT_FAILURE);
-		}
-		while ((bytesLeidos = read(fd,buffer,bsize)) != 0){
+		}	
+		while ((bytesLeidos = read(fd,buffer,bsize)) != 0){		// mientras no se llegue al final del fichero
 			if (bytesLeidos < 0){
 				perror("auxPsplit: read");
 		         	exit(EXIT_FAILURE);
 			}		
 			int bytesRestantes = bytesLeidos;
-			while (nBytesTotales < bytesLeidos){
-				if ( nBytesFA + bytesRestantes >= numBytes ) {
-					bytesEscritos = write(subfd,buffer, numBytes - nBytesFA);
+			while (nBytesTotales < bytesLeidos){	
+				if ( nBytesFA + bytesRestantes > numBytes ) { // si los bytes que hay escritos en el fichero creado + los que quedan por escribir 
+										// del original (fd) es mayor que los bytes a escribir -b
+					bytesEscritos = write(subfd,buffer, numBytes - nBytesFA);	// se escribe -b
 					if (bytesEscritos < 0){
 						perror("auxPsplit: write");
                     				exit(EXIT_FAILURE);
-					}
-					numFile++;
+					}	
+					numFile++;		// y se crea un nuevo fichero
 					fsyncFile(subfd);
 					closeFile(subfd);
 					sprintf(newFile,"%s%d",nombreFichero,numFile);
@@ -1363,16 +1365,18 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 						perror("auxPsplit: open");
 					  	exit(EXIT_FAILURE);
 					}
-					nBytesTotales += bytesEscritos;
+					nBytesTotales += bytesEscritos;	
 					buffer += bytesEscritos;
 					nBytesFA = 0;
-					bytesRestantes -= bytesEscritos;
+					bytesRestantes -= bytesEscritos;  
 				} else {
-					bytesEscritos = write(subfd,buffer, bytesRestantes);
-					if (bytesEscritos < 0){
+					bytesEscritos = write(subfd,buffer, bytesRestantes); // si los bytes que quedaban por escribir es menor 
+												//o igual que -b se escriben esos bytes
+					if (bytesEscritos < 0){ 
 						perror("auxPsplit: write");
                     				exit(EXIT_FAILURE);
-					}
+					} 	
+					// y no se crea ningún fichero
 					nBytesTotales += bytesEscritos;
 					buffer += bytesEscritos;
 					bytesRestantes -= bytesEscritos;
@@ -1391,23 +1395,26 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 	}
 
 	else if (numLineas != 0){ // Caso en el que hay limite en el numero de lineas
-		int n = 0;
+		int n = 0;	// n = número de líneas leídas
+		// creación del primer fichero
 		sprintf(newFile,"%s%d",nombreFichero,numFile);
 		if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC, S_IRWXU)) < 0){
 			perror("auxPsplit: open");
                     	exit(EXIT_FAILURE);
+
 		}
-                int posicionesAvanzadas = 0;
+                int posicionesAvanzadas = 0;	// posiciones avanzadas del buffer en bytes
                 while ((bytesLeidos = read(fd,buffer,bsize)) != 0){
 			if (bytesLeidos < 0){
 				perror("auxPsplit: read");
                     		exit(EXIT_FAILURE);
 			}
+
                 	while ( nBytesTotales < bytesLeidos ) {
-                        	if ( buffer[posicionesAvanzadas] == '\n' ) {
-                                   	n++;
-                                        if (n == numLineas) {
-                                        	if (write(subfd, buffer, posicionesAvanzadas+1) < 0){
+                        	if ( buffer[posicionesAvanzadas] == '\n' ) {	// cada vez que se encuentra con un final de línea
+                                   	n++;	// se suma una línea al contador
+                                        if (n == numLineas) {	// y comprueba si se ha alcanzado el número máximo de líneas / fichero
+                                        	if (write(subfd, buffer, posicionesAvanzadas+1) < 0){	// las escribe con el '\n' del final
 							perror("auxPsplit: write");
                     					exit(EXIT_FAILURE);
 						}
@@ -1415,13 +1422,13 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
                                                 posicionesAvanzadas = 0;
 						fsyncFile(subfd);
                                                 closeFile(subfd);
-                                                numFile++;
+                                                numFile++;	// se crea un nuevo fichero
                                                 sprintf(newFile,"%s%d",nombreFichero,numFile);
 						if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC,S_IRWXU)) < 0){
 							perror("auxPsplit: open");
                     					exit(EXIT_FAILURE);
 						}
-                                                n = 0;
+                                                n = 0; // y se pone el contador de líneas a 0
                                          }
 	   				 else
 						posicionesAvanzadas++;					
@@ -1430,7 +1437,7 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
                                 nBytesTotales++;
 				
                         }
-			if (posicionesAvanzadas > 0){
+			if (posicionesAvanzadas > 0){	// si quedan los últimos bytes por escribir
 				if (write(subfd, buffer, posicionesAvanzadas) < 0){
 					perror("auxPsplit: write");
                     			exit(EXIT_FAILURE);
@@ -1447,29 +1454,24 @@ void auxPsplit(int numLineas,int numBytes,int bsize,int fd,char * nombreFichero)
 	}
 	
 	else if (numBytes == 0 && numLineas == 0){ //Caso en el que no se especifica ni el numero maximo de bytes por fichero ni el numero maximo de lineas 
-		sprintf(newFile,"%s%d",nombreFichero,numFile);
-		if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC, S_IRWXU)) < 0){
-			perror("auxPsplit: open");
-                   	exit(EXIT_FAILURE);
-		}
-		while ((bytesLeidos = read(fd,buffer,bsize)) != 0){ 
-			if (write(subfd,buffer,bytesLeidos) < 0){
+		while ((bytesLeidos = read(fd,buffer,bsize)) != 0){  // mientras se pueda leer 
+			sprintf(newFile,"%s%d",nombreFichero,numFile); // se crea un nuevo fichero
+			if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC, S_IRWXU)) < 0){
+				perror("auxPsplit: open");
+                    		exit(EXIT_FAILURE);
+			}
+			if (write(subfd,buffer,bytesLeidos) < 0){ //se escribe el número por defecto, 1024 bytes
 				perror("auxPsplit: write");
                     		exit(EXIT_FAILURE);
 			}
 			fsyncFile(subfd);
 			closeFile(subfd);
-			numFile++;
-			sprintf(newFile,"%s%d",nombreFichero,numFile);
-			if ((subfd = open(newFile,O_CREAT | O_RDWR | O_TRUNC, S_IRWXU)) < 0){
-				perror("auxPsplit: open");
-                    		exit(EXIT_FAILURE);
-			}
+			numFile++;	
+			
 		}
 		closeFile(fd);
 	}
-	free(buffer); 
-	//printf("%s\n", ecmd->argv[i]);
+	free(buffer); // se libera el buffer
 }
 
 //Funcion del comando interno psplit 
@@ -1482,12 +1484,13 @@ void run_psplit(struct execcmd * ecmd){
     int fd;
     int opcionAyuda = 0;
     int status;
-    int numLineas = 0;
-    int numBytes = 0;
-    int bsize = 1024; 
-    int procs = 1; 
+    int numLineas = 0;	// número de líneas por fichero
+    int numBytes = 0;	// número de bytes por fichero
+    int bsize = 1024; 	// tamaño máximo de lectura -s
+    int procs = 1; 	// número procesos máximos -p
+
     bloquearSenal(SIGCHLD); //Se bloquea la señal SIGCHLD para que no se ejecute el waitpid del manejador
-    while ((opt = getopt(ecmd->argc, ecmd->argv, "l:b:s:p:h")) != -1) { //Parametro con : quiere decir que va seguido de un valor
+    while ((opt = getopt(ecmd->argc, ecmd->argv, "l:b:s:p:h")) != -1) {
         switch (opt) {
             case 'l':  
                 numLineas = atoi(optarg);
@@ -1516,8 +1519,8 @@ void run_psplit(struct execcmd * ecmd){
             
         }
     }
-
-    if (numLineas != 0 && numBytes!= 0){
+    
+    if (numLineas != 0 && numBytes != 0){	
 	printf("psplit: Opciones incompatibles\n");
     }
     else if (bsize < MIN_BSIZE || bsize > MAX_BSIZE){
@@ -1529,70 +1532,73 @@ void run_psplit(struct execcmd * ecmd){
     else if (opcionAyuda){}
 
     else if (optind == ecmd->argc){  //No hay ficheros de entrada
+	// se hace un fork
 	frk = fork_or_panic("fork psplit");
-	if (frk == 0){
+	if (frk == 0){  // si es el hijo, se hace psplit y se finaliza con exit
 		auxPsplit(numLineas,numBytes,bsize,STDIN_FILENO,"stdin");
 		exit(EXIT_SUCCESS);
-	}
+	}  // El padre espera al hijo
 	if (waitpid(frk,&status,0) < 0){
 		perror("run_psplit: waitpid");
 		exit(EXIT_FAILURE);
 	}
     }
 
-	else { //Procesamiento de ficheros de entrada
+	else { //Si hay ficheros de entrada -> procesamiento de ficheros de entrada
 		int i = optind;
-		pid_t * pids = malloc(procs * sizeof(pid_t));
-		memset(pids,0,sizeof(pid_t));
+		pid_t * pids = malloc(procs * sizeof(pid_t));  // Para almacenar los PIDs de los hijos
+		memset(pids,0,sizeof(pid_t)); 		       // inicialización
 		if (pids == NULL){
 			perror("run_psplit: malloc");
 			exit(EXIT_FAILURE);
 		}
-		int nprocs = 0;
-		int indexAdd = 0;
-		int indexWait = 0;
-		for(int i = optind; i < ecmd->argc; i++){
+
+		int nprocs = 0;    	// número de procesos ( hijos ) ejecutándose
+		int indexAdd = 0;	// índice que apunta el lugar en el que almacenar el PID del proceso creado
+		int indexWait = 0;	// índice que indica a qué hijo toca esperar
+
+		for(int i = optind; i < ecmd->argc; i++){ 	// Mientras queden ficheros de entrada ...
 			frk = fork_or_panic("fork psplit");
-			if (frk == 0) {
+			if (frk == 0) {		// Se crea un hijo
 				if ((fd = open(ecmd->argv[i],O_RDONLY,S_IRWXU)) < 0){
 					perror("run_psplit: open");
                     			exit(EXIT_FAILURE);
 				} 
-				auxPsplit(numLineas,numBytes,bsize,fd,ecmd->argv[i]);
-				exit(EXIT_SUCCESS);
+				auxPsplit(numLineas,numBytes,bsize,fd,ecmd->argv[i]);	// se llama auxPsplit en el hijo
+				exit(EXIT_SUCCESS);	// y se finaliza con exit
 			} 
-			pids[indexAdd] = frk;
+			pids[indexAdd] = frk;	// el pid del hijo creado se añade a pids 
 			nprocs++;
 			if (indexAdd + 1 == procs)
 				indexAdd = 0;
 			else 
 				indexAdd++;
 			
-			if ( nprocs == procs ) {
-					if(waitpid((pid_t)pids[indexWait],&status,0) < 0){
+			if ( nprocs == procs ) {	// si se alcanza "-p" procesos hijos
+					if(waitpid((pid_t)pids[indexWait],&status,0) < 0){	// se espera al hijo más antiguo
 							perror("run_psplit: waitpid");
 							exit(EXIT_FAILURE);
 						}
-					if (indexWait + 1 == procs)
+					if (indexWait + 1 == procs)	// si el índice llega a la última posición vuelve al principio
 						indexWait = 0;
 					else 
 						indexWait++;
 					nprocs--;
-			} 
-			if (ecmd->argc - i == 1 ) {
+			} 	
+			if (ecmd->argc - i == 1 ) { // si se acaban los ficheros de entrada, se espera a todos los hijos que quedan ejecutándose en orden
 				while(nprocs > 0) {
 					if(waitpid((pid_t)pids[indexWait],&status,0) < 0){
 							perror("run_psplit: waitpid");
 							exit(EXIT_FAILURE);
 						}
-					if (indexWait + 1 == procs)
+					if (indexWait + 1 == procs)	// si el índice llega a la última posición vuelve al principio
 						indexWait = 0;
 					else 
 						indexWait++;
 					nprocs--;
-
-				} 
-			}
+				}
+			} 
+			
 
 		}
 		free(pids);
