@@ -94,8 +94,26 @@ trap(struct trapframe *tf)
     //-> mapeo la dir.virtual a una nueva pagina fisica y no mato al proceso
     myproc()->killed = 1;
     if (tf->trapno == T_PGFLT){
-        char * bloque = kalloc();
-        mappages(myproc()->pgdir,(void*) PGROUNDDOWN(rcr2()),PGSIZE,V2P(bloque),PTE_W|PTE_U);
+	uint a;
+	a = PGROUNDDOWN(rcr2());
+	if (a >= KERNBASE){ //Se comprueba si la direccion esta en la zona del nucleo	
+		cprintf("Direccion en zona del kernel\n");
+		myproc()->killed = 1;
+		break;
+		
+	}
+	char * bloque = kalloc();
+	if  (bloque == 0){
+		cprintf("No hay suficiente memoria disponible para reservar la pagina fisica\n");
+		//¿Matar al proceso?
+		myproc()->killed = 1;
+		break;
+	}
+	memset(bloque, 0, PGSIZE);
+        if (mappages(myproc()->pgdir,(char*)a,PGSIZE,V2P(bloque),PTE_W|PTE_U) < 0){
+		cprintf("Error al realizar el mapeo\n");
+		break;
+	}
     }else{
         myproc()->killed = 1;
     }
