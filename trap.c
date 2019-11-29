@@ -96,12 +96,17 @@ trap(struct trapframe *tf)
     if (tf->trapno == T_PGFLT){
 	uint a;
 	a = PGROUNDDOWN(rcr2());
-	if (a >= KERNBASE){ //Se comprueba si la direccion esta en la zona del nucleo	
-		cprintf("Direccion en zona del kernel\n");
+	if (a >= KERNBASE || a < 0){ //Fallo en la zona del nucleo o direccion negativa
+		cprintf("Direccion invalida\n");
 		myproc()->killed = 1;
 		break;
 		
 	}
+	else if (a == myproc()->sz - 2*PGSIZE){ //Fallo en la pagina invalida debajo de la pila
+		cprintf("Fallo en el guard page\n");
+		myproc()->killed = 1;
+		break;
+	}	
 	char * bloque = kalloc();
 	if  (bloque == 0){
 		cprintf("No hay suficiente memoria disponible para reservar la pagina fisica\n");
