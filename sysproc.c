@@ -51,6 +51,10 @@ sys_sbrk(void)
   if(argint(0, &n) < 0)
     return -1;
   addr = myproc()->sz;
+  //¿Comprobar si el nuevo tamaño llega al kernbase?
+  if (myproc()->sz + n >= KERNBASE){
+	return -1;
+  }
   myproc()->sz += n;
   if (n < 0){ //si n < 0 liberar marcos mapeados
 	if(growproc(n) < 0)
