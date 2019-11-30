@@ -52,8 +52,10 @@ sys_sbrk(void)
     return -1;
   addr = myproc()->sz;
   myproc()->sz += n;
-  //if(growproc(n) < 0)
-  //  return -1;
+  if (n < 0){ //si n < 0 liberar marcos mapeados
+	if(growproc(n) < 0)
+    		return -1;
+  }
   return addr;
 }
 
@@ -123,12 +125,16 @@ int sys_dup2(void){
 	struct file *f;
 	struct file *f2;
 	int newfd;
-	if(argfd(0, 0, &f) < 0)
+	int oldfd;
+	if(argfd(0, &oldfd, &f) < 0)
    	  return -1;
 	if(argint(1, &newfd) < 0)
           return -1;
 	if (newfd < 0 || newfd >= NOFILE)
 	  return -1;
+	if (oldfd == newfd){
+		return oldfd; 
+	}
 	struct proc *curproc = myproc();
 	if (curproc->ofile[newfd] != 0){
 		f2 = curproc->ofile[newfd];
@@ -139,4 +145,5 @@ int sys_dup2(void){
 	filedup(f);
         return newfd;
 }
+
 
