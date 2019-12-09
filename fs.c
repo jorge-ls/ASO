@@ -375,9 +375,11 @@ bmap(struct inode *ip, uint bn)
 {
   uint addr, *a;
   struct buf *bp;
-  //Si el numero de bloque esta dentro de los directos, retornar ese bloque 
-  //si no esta a 0.Si esta a 0 llamar a balloc para reservar un bloque libre
-  //para ese nuevo bloque de fichero
+
+//Si el numero de bloque está dentro de los directos, retornar ese
+//bloque si no está a 0. Si está a 0, llamar a balloc para reservar 
+//un bloque libre para ese nuevo bloque del fichero
+
   if(bn < NDIRECT){
     if((addr = ip->addrs[bn]) == 0)
       ip->addrs[bn] = addr = balloc(ip->dev);
@@ -385,14 +387,15 @@ bmap(struct inode *ip, uint bn)
   }
   bn -= NDIRECT;
 
-  if(bn < NINDIRECT){
+  if(bn < NINDIRECT){ 
     // Load indirect block, allocating if necessary.
-    // NDIRECT = 11 = donde esta el BSI
-    if((addr = ip->addrs[NDIRECT]) == 0)
+    // NDIRECT = 11 = donde etá el BSI
+    if((addr = ip->addrs[NDIRECT]) == 0) 
       ip->addrs[NDIRECT] = addr = balloc(ip->dev);
-    bp = bread(ip->dev, addr);
+    bp = bread(ip->dev, addr); // Lo lee lo reserve o no, 
+    //lo lee para saber por dónde continúa el fichero
     a = (uint*)bp->data; //BSIZE/sizeof(uint)
-    //Comprueba el numero de bloque de disco dentro del BSI
+    //Comprueba el número de bloque de disco dentro del BSI
     if((addr = a[bn]) == 0){
       a[bn] = addr = balloc(ip->dev);
       log_write(bp);
@@ -400,7 +403,8 @@ bmap(struct inode *ip, uint bn)
     brelse(bp);
     return addr;
   }
-  //No esta en el BSI -> puede estar en el BDI
+
+  /*No esta en el BSI -> puede estar en el BDI
   bn -= NINDIRECT;
   if (bn < NINDIRECT * NINDIRECT){ //numero de bloques que se pueden escribir con BDI
 	//leer el BDI
@@ -412,7 +416,48 @@ bmap(struct inode *ip, uint bn)
 	}
 	//BDI = addr leerlo, ver que posicion ...
 	//return addr;
-   }
+   }*/
+
+  // Una vez que no está en el BSI -> puede estar en el BDI
+  bn -= NINDIRECT;
+  if(bn < NINDIRECT*NINDIRECT)
+  {
+	//Leer el BDI
+	if((addr = ip->addrs[NDIRECT + 1] == 0))
+	{
+	    ip->addrs[NDIRECT + 1] = addr = balloc(ip->dev);
+ 	}
+
+	bp = bread(ip->dev, addr);
+        a = (uint*)bp->data;
+        //Comprueba qué entrada del BDI corresponde al BSI
+        if((addr = a[bn/NINDIRECT]) == 0){
+		cprintf("Posicion del bsi %d\n",bn/NINDIRECT);
+	//if((addr = a[bn]) == 0){
+                a[bn/NINDIRECT] = addr = balloc(ip->dev);
+		//a[bn] = addr = balloc(ip->dev);
+        	log_write(bp);
+	}
+	brelse(bp);
+	// Leemos el BSI
+        /*if((addr = ip->addrs[bn/NINDIRECT] == 0))
+        {   
+            ip->addrs[bn/NINDIRECT] = addr = balloc(ip->dev);
+        }*/
+
+	bp = bread(ip->dev, addr);
+	a = (uint*)bp->data;
+	//Comprueba el número de bloque de disco dentro del BSI
+	if((addr = a[bn%NINDIRECT]) == 0){
+	//if((addr = a[bn]) == 0){
+      		a[bn%NINDIRECT] = addr = balloc(ip->dev);
+		//a[bn] = addr = balloc(ip->dev);
+      		log_write(bp);
+    	}
+   	brelse(bp);
+	return addr;
+    }
+
   panic("bmap: out of range");
 }
 
@@ -426,7 +471,9 @@ itrunc(struct inode *ip)
 {
   int i, j;
   struct buf *bp;
+  //struct buf *bp2;
   uint *a;
+  //uint *a2;
 
   for(i = 0; i < NDIRECT; i++){
     if(ip->addrs[i]){
@@ -447,6 +494,23 @@ itrunc(struct inode *ip)
     ip->addrs[NDIRECT] = 0;
   }
   // liberar BDI si lo tiene
+  /*if (ip->addrs[NDIRECT+1])}{
+	bp = bread(ip->dev, ip->addrs[NDIRECT+1]);
+	a = (uint*)bp->data;
+	for(int i = 0; i < NINDIRECT; i++){
+		if (a[i]){
+			//bp2 = bread(ip->dev,)
+			a2 = (uint*)bp2->data;
+			for (j=0;j<NINDIRECT;j++){
+				if (a2[j])
+					bfree(ip->dev, a[j]);
+			}
+			brelse(bp2);
+			bfree(ip->dev,);
+		}
+	}
+
+  }*/
   ip->size = 0;
   iupdate(ip);
 }
