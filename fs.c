@@ -404,26 +404,12 @@ bmap(struct inode *ip, uint bn)
     return addr;
   }
 
-  /*No esta en el BSI -> puede estar en el BDI
-  bn -= NINDIRECT;
-  if (bn < NINDIRECT * NINDIRECT){ //numero de bloques que se pueden escribir con BDI
-	//leer el BDI
-	//Saber del BDI que BSI corresponde
-	//Leer (crear) ese BSI si no existe
-	//encontrar la posicion de bn dentro de ese BSI (y crearlo si no existe)
-	if ((addr = ip->addrs[NDIRECT+1]) == 0){
-		ip->addrs[NDIRECT+1] = addr = balloc(ip->dev);
-	}
-	//BDI = addr leerlo, ver que posicion ...
-	//return addr;
-   }*/
-
   // Una vez que no está en el BSI -> puede estar en el BDI
   bn -= NINDIRECT;
   if(bn < NINDIRECT*NINDIRECT)
   {
 	//Leer el BDI
-	if((addr = ip->addrs[NDIRECT + 1] == 0))
+	if((addr = ip->addrs[NDIRECT + 1]) == 0)
 	{
 	    ip->addrs[NDIRECT + 1] = addr = balloc(ip->dev);
  	}
@@ -432,26 +418,16 @@ bmap(struct inode *ip, uint bn)
         a = (uint*)bp->data;
         //Comprueba qué entrada del BDI corresponde al BSI
         if((addr = a[bn/NINDIRECT]) == 0){
-		cprintf("Posicion del bsi %d\n",bn/NINDIRECT);
-	//if((addr = a[bn]) == 0){
                 a[bn/NINDIRECT] = addr = balloc(ip->dev);
-		//a[bn] = addr = balloc(ip->dev);
         	log_write(bp);
 	}
 	brelse(bp);
 	// Leemos el BSI
-        /*if((addr = ip->addrs[bn/NINDIRECT] == 0))
-        {   
-            ip->addrs[bn/NINDIRECT] = addr = balloc(ip->dev);
-        }*/
-
 	bp = bread(ip->dev, addr);
 	a = (uint*)bp->data;
 	//Comprueba el número de bloque de disco dentro del BSI
 	if((addr = a[bn%NINDIRECT]) == 0){
-	//if((addr = a[bn]) == 0){
       		a[bn%NINDIRECT] = addr = balloc(ip->dev);
-		//a[bn] = addr = balloc(ip->dev);
       		log_write(bp);
     	}
    	brelse(bp);
@@ -471,9 +447,9 @@ itrunc(struct inode *ip)
 {
   int i, j;
   struct buf *bp;
-  //struct buf *bp2;
+  struct buf *bp2;
   uint *a;
-  //uint *a2;
+  uint *a2;
 
   for(i = 0; i < NDIRECT; i++){
     if(ip->addrs[i]){
@@ -494,23 +470,27 @@ itrunc(struct inode *ip)
     ip->addrs[NDIRECT] = 0;
   }
   // liberar BDI si lo tiene
-  /*if (ip->addrs[NDIRECT+1])}{
+  if (ip->addrs[NDIRECT+1]){
 	bp = bread(ip->dev, ip->addrs[NDIRECT+1]);
 	a = (uint*)bp->data;
-	for(int i = 0; i < NINDIRECT; i++){
-		if (a[i]){
-			//bp2 = bread(ip->dev,)
+	for(int i = 0; i < NINDIRECT; i++){ //Se recorren la lista de BSIs (BDI)
+		if (a[i]){ //Para cada BSI se recorre su lista de punteros a bloques 
+			bp2 = bread(ip->dev,a[i]);
 			a2 = (uint*)bp2->data;
 			for (j=0;j<NINDIRECT;j++){
 				if (a2[j])
 					bfree(ip->dev, a[j]);
 			}
 			brelse(bp2);
-			bfree(ip->dev,);
+			bfree(ip->dev,a[i]); //Se libera el BSI actual
+			//a[i] = 0;
 		}
 	}
+	brelse(bp);
+    	bfree(ip->dev, ip->addrs[NDIRECT+1]);
+    	ip->addrs[NDIRECT+1] = 0;
 
-  }*/
+  }
   ip->size = 0;
   iupdate(ip);
 }
